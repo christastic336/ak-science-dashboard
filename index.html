@@ -2263,16 +2263,15 @@ function saveHiddenCols(set) {
 
 function applyColVisibility() {
   const hidden = getHiddenCols();
-  // Inject a <style> tag with nth-child rules — most reliable cross-browser approach
   let styleEl = document.getElementById('col-hide-style');
   if (!styleEl) {
     styleEl = document.createElement('style');
     styleEl.id = 'col-hide-style';
     document.head.appendChild(styleEl);
   }
-  // nth-child is 1-based; our col indices are 0-based so add 1
+  // Target tbody tds and the last header row only — skips the group-row which throws off nth-child counts
   const rules = [...hidden].map(i =>
-    `.mega-table th:nth-child(${i+1}), .mega-table td:nth-child(${i+1}) { display: none; }`
+    `#roster-table thead tr:last-child th:nth-child(${i+1}), #roster-table tbody td:nth-child(${i+1}) { display: none; }`
   ).join('\n');
   styleEl.textContent = rules;
 
@@ -3023,6 +3022,10 @@ function saveConsultantData(id, data) {
   try { localStorage.setItem('akConsultant_' + id, JSON.stringify(data)); } catch(e) {}
 }
 
+function getSubjClass(v) {
+  return {'Bio':'subj-bio','Chem':'subj-chem','Phys':'subj-phys','Env Sci':'subj-envsci'}[v] || 'subj-none';
+}
+
 function subjChipHtml(subj) {
   if (!subj) return '';
   const cls = { 'Bio': 'bio', 'Chem': 'chem', 'Phys': 'phys', 'Env Sci': 'envsci' }[subj] || '';
@@ -3079,8 +3082,7 @@ function renderConsultantTable() {
     const isSelected = c.id === consState.selectedId;
     const isMockYes = c.mockExamLeader === 'Y' || c.mockExamLeader === true;
     const subjOpts = ['','Bio','Chem','Phys','Env Sci'];
-    const subjColorClass = v => ({Bio:'subj-bio',Chem:'subj-chem',Phys:'subj-phys','Env Sci':'subj-envsci'}[v]||'subj-none');
-    const subjSelect = (val, field) => `<select class="cons-cell-select ${subjColorClass(val)}" onchange="consInlineEdit('${c.id}','${field}',this.value);this.className='cons-cell-select '+({'Bio':'subj-bio',Chem:'subj-chem',Phys:'subj-phys','Env Sci':'subj-envsci'}[this.value]||'subj-none')">${
+    const subjSelect = (val, field) => `<select class="cons-cell-select ${getSubjClass(val)}" onchange="consInlineEdit('${c.id}','${field}',this.value);this.className='cons-cell-select '+getSubjClass(this.value)">${
       subjOpts.map(o => `<option value="${o}" ${val===o?'selected':''}>${o||'—'}</option>`).join('')
     }</select>`;
     const numInput = (val, field) => `<input type="number" min="0" class="cons-cell-number" value="${val??''}" placeholder="—" onchange="consInlineEdit('${c.id}','${field}',this.value===''?null:Number(this.value))">`;
