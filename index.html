@@ -542,6 +542,17 @@ select:focus { outline: none; border-color: var(--accent); }
 .hm-titlebar .hm-title { font-size: 0.9rem; font-weight: 700; color: var(--text); }
 .hm-titlebar .hm-subtitle { font-size: 0.75rem; color: var(--muted); }
 
+/* ─── COVERAGE MAP ─── */
+#coveragemap-view { display: none; height: calc(100vh - 90px); flex-direction: column; overflow: hidden; }
+#cm-tooltip {
+  position: fixed; background: var(--surface); border: 1px solid var(--border);
+  border-radius: 8px; padding: 10px 13px; font-size: 0.8rem; pointer-events: none;
+  z-index: 999; min-width: 160px; box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+  display: none;
+}
+#cm-tooltip .cm-tt-name { font-weight: 700; font-size: 0.9rem; margin-bottom: 4px; color: var(--text); }
+#cm-tooltip .cm-tt-sub  { font-size: 0.75rem; color: var(--muted); }
+
 </style>
 </head>
 <body>
@@ -579,6 +590,7 @@ select:focus { outline: none; border-color: var(--accent); }
   <button class="top-tab" id="tab-consultant" onclick="switchView('consultant')">🔬 Consultants</button>
   <button class="top-tab" id="tab-dashboard" onclick="switchView('dashboard')">📊 School Dashboard</button>
   <button class="top-tab" id="tab-heatmap" onclick="switchView('heatmap')">🗺️ County Heatmap</button>
+  <button class="top-tab" id="tab-coveragemap" onclick="switchView('coveragemap')">📍 Coverage Map</button>
 </div>
 <div id="dashboard-view" class="app">
   <!-- ─── SIDEBAR ─── -->
@@ -1266,10 +1278,13 @@ function switchView(view) {
   document.getElementById('heatmap-view').classList.toggle('visible', view === 'heatmap');
   document.getElementById('roster-view').classList.toggle('visible', view === 'roster');
   document.getElementById('consultant-view').classList.toggle('visible', view === 'consultant');
+  // Coverage map: show as flex when active, hide otherwise
+  document.getElementById('coveragemap-view').style.display = view === 'coveragemap' ? 'flex' : 'none';
   document.getElementById('tab-dashboard').classList.toggle('active', view === 'dashboard');
   document.getElementById('tab-heatmap').classList.toggle('active', view === 'heatmap');
   document.getElementById('tab-roster').classList.toggle('active', view === 'roster');
   document.getElementById('tab-consultant').classList.toggle('active', view === 'consultant');
+  document.getElementById('tab-coveragemap').classList.toggle('active', view === 'coveragemap');
   if (view === 'heatmap') {
     if (!hmState.geoLoaded) initHeatmap();
     else renderHeatmap();
@@ -1281,6 +1296,9 @@ function switchView(view) {
   if (view === 'consultant') {
     renderConsultantTable();
     applyConsColVisibility();
+  }
+  if (view === 'coveragemap') {
+    if (!coverageMapInited) initCoverageMap();
   }
 }
 // Default to roster tab on load
@@ -1786,6 +1804,18 @@ window.addEventListener('DOMContentLoaded', init);
 <div id="hm-tooltip">
   <div class="tt-county" id="tt-county-name"></div>
   <div id="tt-rows"></div>
+</div>
+
+<!-- ─── COVERAGE MAP VIEW ─── -->
+<div id="coveragemap-view">
+  <div style="flex:1;position:relative;overflow:hidden" id="cm-map-container">
+    <svg id="cm-svg" style="width:100%;height:100%"></svg>
+  </div>
+  <div id="cm-legend" style="padding:14px 20px;background:var(--surface);border-top:1px solid var(--border);flex-shrink:0"></div>
+</div>
+<div id="cm-tooltip">
+  <div class="cm-tt-name" id="cm-tt-name"></div>
+  <div class="cm-tt-sub" id="cm-tt-sub"></div>
 </div>
 
 <!-- ─── ROSTER VIEW ─── -->
@@ -4026,6 +4056,339 @@ deleteConsultant = function(id) {
     syncDeleteConsultant(id).catch(() => {});
   }
 };
+
+// ═══════════════════════════════════════════════════════════════
+// COVERAGE MAP
+// ═══════════════════════════════════════════════════════════════
+
+let coverageMapInited = false;
+
+// KY ZIP code → [lat, lng] approximate centroids
+const KY_ZIP_COORDS = {
+  '40205': [38.2253, -85.6559], // Louisville
+  '40299': [38.1878, -85.5763], // Louisville East
+  '42211': [36.8680, -87.8356], // Cadiz
+  '42303': [37.7719, -87.1112], // Owensboro
+  '42141': [37.0017, -85.9119], // Glasgow
+  '40509': [37.9986, -84.4232], // Lexington East
+  '40515': [37.9358, -84.4232], // Lexington SE
+  '42101': [36.9903, -86.4436], // Bowling Green
+  '41031': [38.3878, -84.2941], // Cynthiana
+  '40356': [37.8851, -84.5733], // Nicholasville
+  '42501': [37.0920, -84.6041], // Somerset
+  '42420': [37.8362, -87.5900], // Henderson
+  '40475': [37.7479, -84.2947], // Richmond
+  '41144': [38.5706, -82.8271], // Greenup
+  '41649': [37.4218, -82.8188], // Ivel
+  '41472': [37.9170, -83.2610], // West Liberty
+  '41129': [38.4100, -82.6043], // Catlettsburg
+  '40769': [36.7731, -84.1491], // Williamsburg
+  '41141': [38.5487, -83.1716], // Garrison
+  '42701': [37.6987, -85.8794], // Elizabethtown
+  '40033': [37.5698, -85.2566], // Lebanon
+  '41042': [38.9939, -84.6249], // Florence
+  '41230': [38.1132, -82.6027], // Louisa
+  '40403': [37.5687, -84.2963], // Berea
+  '41501': [37.4793, -82.5210], // Pikeville
+  '42301': [37.7719, -87.1112], // Owensboro
+  '40391': [37.9887, -84.1780], // Winchester
+  '41101': [38.4784, -82.6379], // Ashland
+  '40741': [37.0987, -84.0777], // London
+  '42240': [36.8656, -87.4886], // Hopkinsville
+  '40065': [38.1834, -85.1543], // Shelbyville
+  '42071': [36.6101, -88.3143], // Murray
+  '40601': [38.1867, -84.8753], // Frankfort
+  '40422': [37.7298, -84.7963], // Danville
+  '40342': [38.0406, -85.0019], // Lawrenceburg
+  '42566': [37.3523, -84.9277], // Hustonville area
+  '40165': [37.9887, -85.7143], // Shepherdsville (North Bullitt)
+  '40351': [38.2042, -83.4271], // Morehead
+  '40324': [38.2098, -84.5588], // Georgetown
+  '41056': [38.6412, -83.7432], // Maysville
+  '40505': [38.0554, -84.4605], // Lexington
+  '40330': [37.7596, -84.8460], // Harrodsburg
+  '40004': [37.8126, -85.4669], // Bardstown
+  '41102': [38.4784, -82.6379], // Ashland area
+};
+
+// Subject → color mapping
+const SUBJ_COLOR = {
+  'Bio':     '#34d399',
+  'Chem':    '#fbbf24',
+  'Phys':    '#f87171',
+  'Physics 1': '#f87171',
+  'Env Sci': '#4f8ef7',
+  'DC Bio':  '#34d399',
+  'DC Chem 101': '#fbbf24',
+};
+function subjColor(s) { return SUBJ_COLOR[s] || '#9ca3af'; }
+function subjKey(s) {
+  if (!s) return 'Unknown';
+  if (s === 'Bio' || s === 'DC Bio') return 'Bio';
+  if (s === 'Chem' || s === 'DC Chem 101') return 'Chem';
+  if (s === 'Phys' || s === 'Physics 1') return 'Phys';
+  if (s === 'Env Sci') return 'Env Sci';
+  return 'Unknown';
+}
+
+// Extract ZIP from address2 string (last 5 digits)
+function extractZip(addr2) {
+  if (!addr2) return null;
+  const m = addr2.match(/(\d{5})\s*$/);
+  return m ? m[1] : null;
+}
+
+// Star polygon helper
+function starPoints(cx, cy, r, n) {
+  n = n || 5;
+  const pts = [];
+  for (let i = 0; i < n * 2; i++) {
+    const angle = (i * Math.PI / n) - Math.PI / 2;
+    const rad = i % 2 === 0 ? r : r * 0.45;
+    pts.push([cx + rad * Math.cos(angle), cy + rad * Math.sin(angle)]);
+  }
+  return pts.map(function(p) { return p.join(','); }).join(' ');
+}
+
+// Jitter offset for markers sharing the same ZIP centroid
+function jitterOffset(idx, total) {
+  if (total === 1) return [0, 0];
+  const angle = (idx / total) * 2 * Math.PI;
+  const r = 6 + Math.floor(idx / 8) * 5;
+  return [r * Math.cos(angle), r * Math.sin(angle)];
+}
+
+async function initCoverageMap() {
+  coverageMapInited = true;
+
+  const container = document.getElementById('cm-map-container');
+  const W = container.clientWidth || 900;
+  const H = container.clientHeight || 500;
+
+  const svg = d3.select('#cm-svg')
+    .attr('viewBox', '0 0 ' + W + ' ' + H)
+    .attr('preserveAspectRatio', 'xMidYMid meet');
+
+  // Load TopoJSON (reuse cached geo if heatmap already loaded it)
+  let kyGeo = null;
+  if (hmState.geoLoaded && hmState.geo) {
+    kyGeo = hmState.geo;
+  } else {
+    let topo = null;
+    const urls = [
+      'https://cdn.jsdelivr.net/npm/us-atlas@3/counties-10m.json',
+      'https://unpkg.com/us-atlas@3/counties-10m.json'
+    ];
+    for (const url of urls) {
+      try { topo = await fetch(url).then(function(r){ return r.json(); }); break; }
+      catch(e) { console.warn('Coverage map: TopoJSON fetch failed', url, e); }
+    }
+    if (!topo) {
+      container.innerHTML = '<p style="color:var(--muted);padding:40px">Map unavailable — could not load county geometry.</p>';
+      return;
+    }
+    const allCounties = topojson.feature(topo, topo.objects.counties);
+    kyGeo = { type: 'FeatureCollection', features: allCounties.features.filter(function(f){ return String(f.id).startsWith('21'); }) };
+  }
+
+  // Projection tuned for Kentucky
+  const projection = d3.geoAlbers()
+    .center([0, 37.5])
+    .rotate([85.7, 0])
+    .parallels([36, 38.5])
+    .scale(W * 8.4)
+    .translate([W / 2, H / 2]);
+
+  const path = d3.geoPath().projection(projection);
+
+  // Draw county base layer
+  svg.append('g').attr('class', 'cm-counties')
+    .selectAll('path')
+    .data(kyGeo.features)
+    .enter().append('path')
+      .attr('d', path)
+      .attr('fill', 'var(--surface2)')
+      .attr('stroke', '#111')
+      .attr('stroke-width', 0.4);
+
+  // ── Build marker data ──────────────────────────────────────────
+
+  // School address → ZIP lookup (from SCHOOL_ADDRESSES)
+  // Also handle the name mismatch for Martha Layne Collins HS
+  const schoolAddrMap = Object.assign({}, SCHOOL_ADDRESSES, {
+    'Martha Layne Collins HS': SCHOOL_ADDRESSES['Martha Layne Collins High School']
+  });
+
+  const missingNames = [];   // KY people with no resolvable address
+  const markers = [];        // { x, y, type, color, label, subjLabel, id, isTeacher, zip }
+
+  // Build per-ZIP groups for jitter
+  const byZip = {};
+
+  // ── Teachers ──────────────────────────────────────────────────
+  TEACHERS.forEach(function(t) {
+    const addrStr = schoolAddrMap[t.school];
+    const zip = extractZip(addrStr || '');
+    const coords = zip ? KY_ZIP_COORDS[zip] : null;
+    const name = t.firstName + ' ' + t.lastName;
+    if (!coords) {
+      if (addrStr) {
+        // Has an address but ZIP not in our lookup — still list as missing
+        missingNames.push(name + ' (' + t.school + ')');
+      } else if (!addrStr) {
+        missingNames.push(name + ' (' + t.school + ')');
+      }
+      return;
+    }
+    const proj = projection([coords[1], coords[0]]);
+    if (!proj) return;
+    const subj = subjKey(t.course);
+    const col = subjColor(t.course);
+    if (!byZip[zip]) byZip[zip] = [];
+    byZip[zip].push({ x: proj[0], y: proj[1], type: 'teacher', color: col, name: name, subjLabel: subj, id: t.id, zip: zip });
+  });
+
+  // ── Consultants (and Mentors) ──────────────────────────────────
+  CONSULTANTS.forEach(function(c) {
+    // Only KY addresses
+    if (!c.address2 || !/\bKY\b/.test(c.address2)) {
+      // Still might need to list as missing if they appear to be KY-related
+      return;
+    }
+    const zip = extractZip(c.address2);
+    const coords = zip ? KY_ZIP_COORDS[zip] : null;
+    const name = c.firstName + ' ' + c.lastName;
+    if (!coords) {
+      missingNames.push(name + ' (consultant)');
+      return;
+    }
+    const proj = projection([coords[1], coords[0]]);
+    if (!proj) return;
+    const subj = subjKey(c.subj1);
+    const col = subjColor(c.subj1);
+    const isMentor = c.mentorBlocks && c.mentorBlocks > 0;
+    if (!byZip[zip]) byZip[zip] = [];
+    byZip[zip].push({ x: proj[0], y: proj[1], type: isMentor ? 'mentor' : 'consultant', color: col, name: name, subjLabel: subj, id: c.id, zip: zip });
+  });
+
+  // Apply jitter within each ZIP group
+  Object.keys(byZip).forEach(function(zip) {
+    const group = byZip[zip];
+    group.forEach(function(m, i) {
+      const off = jitterOffset(i, group.length);
+      m.jx = m.x + off[0];
+      m.jy = m.y + off[1];
+      markers.push(m);
+    });
+  });
+
+  // ── Draw markers ──────────────────────────────────────────────
+  const tooltip = document.getElementById('cm-tooltip');
+  const ttName  = document.getElementById('cm-tt-name');
+  const ttSub   = document.getElementById('cm-tt-sub');
+
+  const markerG = svg.append('g').attr('class', 'cm-markers');
+
+  markers.forEach(function(m) {
+    let el;
+    if (m.type === 'teacher') {
+      // Circle
+      el = markerG.append('circle')
+        .attr('cx', m.jx)
+        .attr('cy', m.jy)
+        .attr('r', 6)
+        .attr('fill', m.color)
+        .attr('opacity', 0.85)
+        .attr('stroke', '#111')
+        .attr('stroke-width', 0.8);
+    } else if (m.type === 'mentor') {
+      // Star
+      el = markerG.append('polygon')
+        .attr('points', starPoints(m.jx, m.jy, 7))
+        .attr('fill', m.color)
+        .attr('opacity', 0.9)
+        .attr('stroke', '#111')
+        .attr('stroke-width', 0.8);
+    } else {
+      // Square (consultant)
+      el = markerG.append('rect')
+        .attr('x', m.jx - 5)
+        .attr('y', m.jy - 5)
+        .attr('width', 10)
+        .attr('height', 10)
+        .attr('fill', m.color)
+        .attr('opacity', 0.85)
+        .attr('stroke', '#111')
+        .attr('stroke-width', 0.8);
+    }
+
+    el.style('cursor', 'pointer')
+      .on('mousemove', function(event) {
+        ttName.textContent = m.name;
+        ttSub.textContent  = m.subjLabel + ' — ' + (m.type === 'teacher' ? 'Teacher' : m.type === 'mentor' ? 'Mentor' : 'Consultant');
+        tooltip.style.display = 'block';
+        tooltip.style.left = (event.clientX + 14) + 'px';
+        tooltip.style.top  = (event.clientY - 10) + 'px';
+      })
+      .on('mouseleave', function() {
+        tooltip.style.display = 'none';
+      })
+      .on('click', function() {
+        if (m.type === 'teacher') {
+          switchView('roster');
+          selectTeacher(m.id);
+        } else {
+          switchView('consultant');
+          selectConsultant(m.id);
+        }
+      });
+  });
+
+  // ── Legend ────────────────────────────────────────────────────
+  const legendEl = document.getElementById('cm-legend');
+  const shapeSvg = function(type, color) {
+    if (type === 'circle') {
+      return '<svg width="14" height="14" style="vertical-align:middle;margin-right:5px"><circle cx="7" cy="7" r="5.5" fill="' + color + '" stroke="#111" stroke-width="0.8"/></svg>';
+    } else if (type === 'square') {
+      return '<svg width="14" height="14" style="vertical-align:middle;margin-right:5px"><rect x="2" y="2" width="10" height="10" fill="' + color + '" stroke="#111" stroke-width="0.8"/></svg>';
+    } else {
+      // star
+      const pts = starPoints(7, 7, 6);
+      return '<svg width="14" height="14" style="vertical-align:middle;margin-right:5px"><polygon points="' + pts + '" fill="' + color + '" stroke="#111" stroke-width="0.8"/></svg>';
+    }
+  };
+
+  const shapes = [
+    { type: 'circle',  label: 'Teacher',    color: '#e2e8f0' },
+    { type: 'square',  label: 'Consultant', color: '#e2e8f0' },
+    { type: 'star',    label: 'Mentor',     color: '#e2e8f0' },
+  ];
+  const colors = [
+    { color: '#34d399', label: 'Bio' },
+    { color: '#fbbf24', label: 'Chem' },
+    { color: '#f87171', label: 'Phys' },
+    { color: '#4f8ef7', label: 'Env Sci' },
+    { color: '#9ca3af', label: 'Unknown' },
+  ];
+
+  const shapeHtml = shapes.map(function(s) {
+    return '<span style="display:inline-flex;align-items:center;margin-right:14px;font-size:0.78rem;color:var(--text)">' + shapeSvg(s.type, s.color) + s.label + '</span>';
+  }).join('');
+
+  const colorHtml = colors.map(function(c) {
+    return '<span style="display:inline-flex;align-items:center;margin-right:14px;font-size:0.78rem;color:var(--text)"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:' + c.color + ';margin-right:5px;vertical-align:middle"></span>' + c.label + '</span>';
+  }).join('');
+
+  let missingHtml = '';
+  if (missingNames.length > 0) {
+    missingHtml = '<div style="margin-top:8px;font-size:0.75rem;color:var(--muted)"><span style="font-weight:600;color:var(--yellow)">Missing Address:</span> ' + missingNames.join(', ') + '</div>';
+  }
+
+  legendEl.innerHTML =
+    '<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px">' + shapeHtml + '</div>' +
+    '<div style="display:flex;flex-wrap:wrap;gap:4px">' + colorHtml + '</div>' +
+    missingHtml;
+}
 
 </script>
 
