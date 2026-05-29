@@ -3026,7 +3026,12 @@ function copyRosterEmails() {
 .prog-switch { display: flex; gap: 6px; }
 .prog-switch button { background: var(--surface); border: 1px solid var(--border); color: var(--muted); padding: 6px 16px; border-radius: 6px; cursor: pointer; font-size: 0.85rem; font-weight: 600; }
 .prog-switch button.active { background: var(--accent); border-color: var(--accent); color: #fff; }
-.prog-hint { font-size: 0.75rem; color: var(--muted); margin-left: auto; max-width: 380px; }
+.prog-addcard { display: flex; align-items: center; gap: 6px; }
+.prog-addcard input { background: var(--surface); border: 1px solid var(--border); color: var(--text); border-radius: 6px; padding: 5px 9px; font-size: 0.8rem; width: 130px; }
+.prog-addcard input:focus { outline: none; border-color: var(--accent); }
+.prog-addcard button { background: var(--accent); border: none; color: #fff; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 0.8rem; font-weight: 600; white-space: nowrap; }
+.prog-hint { font-size: 0.75rem; color: var(--muted); margin-left: auto; max-width: 320px; }
+.prog-card-manual { border-color: var(--green); }
 .prog-board-area { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
 .prog-board { position: relative; flex: 1; min-height: 0; margin: 14px 20px 0; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; background-color: var(--surface); background-image: linear-gradient(rgba(124,92,191,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(124,92,191,0.05) 1px, transparent 1px); background-size: 40px 40px; }
 .prog-board-title { position: absolute; top: 10px; left: 14px; font-size: 0.95rem; font-weight: 700; color: var(--muted); letter-spacing: 0.04em; text-transform: uppercase; pointer-events: none; }
@@ -3058,7 +3063,12 @@ function copyRosterEmails() {
       <button data-board="fallforum" onclick="setProgBoard('fallforum')">Fall Forum</button>
       <button data-board="examprep" onclick="setProgBoard('examprep')">Exam Prep</button>
     </div>
-    <span class="prog-hint">Check the “Programming” box on a consultant to add their card here. Drag cards onto the board to organize.</span>
+    <div class="prog-addcard" id="prog-addcard">
+      <input type="text" id="prog-new-label" placeholder="Card label…" onkeydown="if(event.key==='Enter')addManualProgCard()">
+      <input type="text" id="prog-new-sub" placeholder="Subtitle (optional)…" onkeydown="if(event.key==='Enter')addManualProgCard()">
+      <button onclick="addManualProgCard()">+ Add Card</button>
+    </div>
+    <span class="prog-hint">Check the “Programming” box on a consultant to add their card, or add a manual card above. Drag cards onto the board to organize.</span>
   </div>
   <div class="prog-board-area">
     <div class="prog-board" id="prog-board">
@@ -3826,6 +3836,27 @@ let _progCurrentBoard = 'launchday';
 // Missing entry => card lives in the tray (unplaced).
 let _progPositions = { launchday: {}, fallforum: {}, examprep: {} };
 
+// Manual (non-consultant) cards, per board: _progManual[board][id] = {label, sub}.
+// ids look like 'man-<n>'. Duplicates of manual cards use 'man-<n>#dup-<k>'.
+let _progManual = { launchday: {}, fallforum: {}, examprep: {} };
+const PROG_MANUAL_KEY = 'akProgrammingManualCards';
+function saveProgManualLocal() {
+  try { localStorage.setItem(PROG_MANUAL_KEY, JSON.stringify(_progManual)); } catch(e) {}
+}
+function loadProgManualLocal() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(PROG_MANUAL_KEY) || 'null');
+    if (saved && typeof saved === 'object') {
+      _progManual = {
+        launchday: saved.launchday || {},
+        fallforum: saved.fallforum || {},
+        examprep:  saved.examprep  || {},
+      };
+    }
+  } catch(e) {}
+}
+loadProgManualLocal();
+
 // ─── LOCAL PERSISTENCE FOR BOARD LAYOUTS ─────────────────────────────
 // Positions are saved to localStorage so they survive refresh while offline,
 // and also pushed to the Sheet when signed in (handled in syncProgrammingPosition).
@@ -3876,16 +3907,69 @@ function progIsDup(cardId) {
 function progConsultantFor(cardId) {
   return CONSULTANTS.find(c => c.id === progBaseId(cardId));
 }
+function progIsManual(cardId) {
+  return String(cardId).startsWith('man-');
+}
+// Manual card definition for the CURRENT board, by base id.
+function progManualFor(cardId) {
+  return (_progManual[_progCurrentBoard] || {})[progBaseId(cardId)];
+}
 
-function progCardHTML(c, isDup) {
-  const subj = [c.subj1, c.subj2].filter(Boolean).join(' · ');
+// Create a manual (non-consultant) card on the current board. It is added to the
+// tray (unplaced) for the user to drag onto the board.
+function addManualProgCard() {
+  const labelEl = document.getElementById('prog-new-label');
+  const subEl = document.getElementById('prog-new-sub');
+  const label = (labelEl.value || '').trim();
+  if (!label) { labelEl.style.borderColor = 'var(--red)'; labelEl.focus(); return; }
+  labelEl.style.borderColor = '';
+  const sub = (subEl.value || '').trim();
+  if (!_progManual[_progCurrentBoard]) _progManual[_progCurrentBoard] = {};
+  let n = 1;
+  while (_progManual[_progCurrentBoard]['man-' + n]) n++;
+  const id = 'man-' + n;
+  _progManual[_progCurrentBoard][id] = { label, sub };
+  saveProgManualLocal();
+  syncProgrammingManual(_progCurrentBoard, id, label, sub); // push to Sheet if signed in
+  labelEl.value = ''; subEl.value = '';
+  renderProgrammingBoard();
+  labelEl.focus();
+}
+
+// Remove a manual card (and its placed position). Also removes any duplicates of it.
+function removeManualCard(cardId) {
+  const base = progBaseId(cardId);
+  const board = _progCurrentBoard;
+  // delete the manual definition
+  if (_progManual[board]) { delete _progManual[board][base]; saveProgManualLocal(); }
+  syncProgrammingManual(board, base, null, null); // clear in Sheet
+  // delete its position and any duplicate positions of it
+  const pos = _progPositions[board] || {};
+  Object.keys(pos).forEach(pid => {
+    if (pid === base || progBaseId(pid) === base) {
+      delete pos[pid];
+      syncProgrammingPosition(board, pid, null, null);
+    }
+  });
+  renderProgrammingBoard();
+}
+
+// Build a card's inner HTML. `name` and `sub` are display strings; `delMode`
+// is 'dup' (removes a duplicate), 'manual' (removes a manual card), or '' (no ✕).
+function progCardHTML(name, sub, delMode) {
   const dupBtn = `<button class="pc-btn pc-dup" title="Duplicate this card" onclick="event.stopPropagation();duplicateProgCard(this.closest('.prog-card').dataset.id)">⧉</button>`;
-  const delBtn = `<button class="pc-btn pc-del" title="Remove this duplicate" onclick="event.stopPropagation();removeProgDup(this.closest('.prog-card').dataset.id)">✕</button>`;
+  let delBtn = '';
+  if (delMode === 'dup') {
+    delBtn = `<button class="pc-btn pc-del" title="Remove this duplicate" onclick="event.stopPropagation();removeProgDup(this.closest('.prog-card').dataset.id)">✕</button>`;
+  } else if (delMode === 'manual') {
+    delBtn = `<button class="pc-btn pc-del" title="Delete this card" onclick="event.stopPropagation();removeManualCard(this.closest('.prog-card').dataset.id)">✕</button>`;
+  }
+  const esc = s => String(s||'').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   return `<div class="pc-head">`
-    + `<div class="pc-name">${(c.firstName||'')} ${(c.lastName||'')}</div>`
-    + `<div class="pc-actions">${dupBtn}${isDup ? delBtn : ''}</div>`
+    + `<div class="pc-name">${esc(name)}</div>`
+    + `<div class="pc-actions">${dupBtn}${delBtn}</div>`
     + `</div>`
-    + (subj ? `<div class="pc-subj">${subj}</div>` : '');
+    + (sub ? `<div class="pc-subj">${esc(sub)}</div>` : '');
 }
 
 // Create an independent duplicate of a card on the CURRENT board, offset slightly
@@ -3938,49 +4022,71 @@ function renderProgrammingBoard() {
   });
 
   const people = progConsultants();
-  if (people.length === 0) {
-    tray.innerHTML = '<span class="prog-empty">No consultants have the Programming box checked yet.</span>';
-    return;
-  }
+  const manual = _progManual[_progCurrentBoard] || {};
+  const manualIds = Object.keys(manual);
 
-  const mkCard = (cardId, c, isDup) => {
+  // Helper to create a card element from a name/sub/delMode descriptor
+  const mkCard = (cardId, name, sub, isDup, delMode) => {
     const card = document.createElement('div');
-    card.className = 'prog-card' + (isDup ? ' prog-card-dup' : '');
+    card.className = 'prog-card' + (isDup ? ' prog-card-dup' : '') + (progIsManual(cardId) ? ' prog-card-manual' : '');
     card.dataset.id = cardId;
-    card.innerHTML = progCardHTML(c, isDup);
+    card.innerHTML = progCardHTML(name, sub, delMode);
     return card;
   };
-
-  let unplaced = 0;
-  // Originals (one per checked consultant)
-  people.forEach(c => {
-    const card = mkCard(c.id, c, false);
-    const p = pos[c.id];
+  const placeOrTray = (card, cardId) => {
+    const p = pos[cardId];
     if (p) {
       card.style.left = (p.x * 100) + '%';
       card.style.top = (p.y * 100) + '%';
       board.appendChild(card);
     } else {
       tray.appendChild(card);
-      unplaced++;
+      trayCount++;
     }
-    attachProgDrag(card, c.id);
+    attachProgDrag(card, cardId);
+  };
+
+  let trayCount = 0;
+
+  // Consultant originals (one per checked consultant)
+  people.forEach(c => {
+    const name = `${c.firstName||''} ${c.lastName||''}`.trim();
+    const sub = [c.subj1, c.subj2].filter(Boolean).join(' · ');
+    placeOrTray(mkCard(c.id, name, sub, false, ''), c.id);
   });
 
-  // Duplicates (only exist as saved positions; always board-placed)
+  // Manual originals (deletable via ✕)
+  manualIds.forEach(mid => {
+    const m = manual[mid];
+    placeOrTray(mkCard(mid, m.label, m.sub, false, 'manual'), mid);
+  });
+
+  // Duplicates (consultant or manual) — exist only as saved positions, board-placed
   Object.keys(pos).filter(progIsDup).forEach(dupId => {
-    const c = progConsultantFor(dupId);
-    if (!c) return; // base consultant gone or unchecked — skip orphan
+    let name, sub;
+    if (progIsManual(dupId)) {
+      const m = manual[progBaseId(dupId)];
+      if (!m) return; // manual source deleted — skip orphan
+      name = m.label; sub = m.sub;
+    } else {
+      const c = progConsultantFor(dupId);
+      if (!c) return; // base consultant gone or unchecked — skip orphan
+      name = `${c.firstName||''} ${c.lastName||''}`.trim();
+      sub = [c.subj1, c.subj2].filter(Boolean).join(' · ');
+    }
     const p = pos[dupId];
-    const card = mkCard(dupId, c, true);
+    const card = mkCard(dupId, name, sub, true, 'dup');
     card.style.left = (p.x * 100) + '%';
     card.style.top = (p.y * 100) + '%';
     board.appendChild(card);
     attachProgDrag(card, dupId);
   });
 
-  if (unplaced === 0 && people.length > 0) {
-    if (!tray.children.length) tray.innerHTML = '<span class="prog-empty">All cards placed on the board.</span>';
+  // Tray empty-state messaging
+  if (people.length === 0 && manualIds.length === 0) {
+    tray.innerHTML = '<span class="prog-empty">No cards yet — check the Programming box on a consultant, or add a manual card above.</span>';
+  } else if (trayCount === 0 && !tray.children.length) {
+    tray.innerHTML = '<span class="prog-empty">All cards placed on the board.</span>';
   }
 }
 
@@ -4243,12 +4349,13 @@ async function loadSheetsData() {
   setSyncState('syncing');
   try {
     // Load all four tabs in parallel
-    const [teacherData, consultantData, consNotesData, teacherEventsData, progLayoutData] = await Promise.all([
+    const [teacherData, consultantData, consNotesData, teacherEventsData, progLayoutData, progManualData] = await Promise.all([
       sheetsGet('Teachers!A:N'),
       sheetsGet(`Consultants!A:${CONSULTANT_LAST_COL}`),
       sheetsGet('ConsultantNotes!A:C'),
       sheetsGet('TeacherEvents!A:C'),
       sheetsGet('ProgrammingLayout!A:D').catch(() => ({ values: [] })),
+      sheetsGet('ProgrammingManual!A:D').catch(() => ({ values: [] })),
     ]);
 
     // ── Teachers ──
@@ -4330,6 +4437,19 @@ async function loadSheetsData() {
         if (!isNaN(x) && !isNaN(y)) _progPositions[b][r.consultantId] = { x, y };
       });
       saveProgPositionsLocal(); // keep local mirror in sync with the Sheet
+    }
+
+    // ── ProgrammingManual → manual card definitions per board ──
+    // Columns: board, id, label, sub
+    const manualRows = sheetToObjects(progManualData);
+    if (manualRows.length > 0) {
+      _progManual = { launchday: {}, fallforum: {}, examprep: {} };
+      manualRows.forEach(r => {
+        const b = r.board;
+        if (!b || !_progManual[b] || !r.id || !r.label) return;
+        _progManual[b][r.id] = { label: r.label, sub: r.sub || '' };
+      });
+      saveProgManualLocal();
     }
 
     setSyncState('synced');
@@ -4434,6 +4554,29 @@ async function syncProgrammingPosition(board, consultantId, x, y) {
     }
   } catch(err) {
     showSyncToast('Programming layout sync failed: ' + err.message);
+  }
+}
+
+// ─── PROGRAMMING MANUAL CARD WRITE-BACK ──────────────────────────────
+// Stores manual card definitions in a ProgrammingManual tab.
+// Columns: board, id, label, sub. Pass label=null to delete (clears the row).
+async function syncProgrammingManual(board, id, label, sub) {
+  // Local copy already saved by callers; only push to Sheet when signed in.
+  if (!_gsiAccessToken) return;
+  try {
+    const data = await sheetsGet('ProgrammingManual!A:B').catch(() => ({ values: [['board','id']] }));
+    const rows = (data.values || []);
+    const rowIdx = rows.findIndex((r, i) => i > 0 && r[0] === board && r[1] === id);
+    const lVal = label == null ? '' : String(label);
+    const sVal = sub == null ? '' : String(sub);
+    if (rowIdx === -1) {
+      await sheetsAppend('ProgrammingManual', [[board, id, lVal, sVal]]);
+    } else {
+      const sheetRow = rowIdx + 1;
+      await sheetsPut(`ProgrammingManual!A${sheetRow}:D${sheetRow}`, [[board, id, lVal, sVal]]);
+    }
+  } catch(err) {
+    showSyncToast('Programming card sync failed: ' + err.message);
   }
 }
 
