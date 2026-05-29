@@ -3863,6 +3863,10 @@ function sheetToObjects(data) {
 // ─── COLUMN MAPS ────────────────────────────────────────────────────
 const TEACHER_COLS = ['id','lastName','firstName','school','district','course','crpYear','program','confirmed','status','firstDayNotes','mentorRequested','teacherEmail','principalEmail'];
 const CONSULTANT_COLS = ['id','lastName','firstName','subj1','subj2','address1','address2','homePhone','cellPhone','email','contract','launchDayBlocks','ffssBlocks','masterSeries','msMod','stipend','travelAllowance','mentorBlocks','mockExamLeader'];
+// Last Sheet column letter for the Consultants tab, derived from column count so
+// adding/removing fields never desyncs the A1 range (1->A, 18->R, 19->S, …).
+function colLetter(n) { let s = ''; while (n > 0) { const m = (n - 1) % 26; s = String.fromCharCode(65 + m) + s; n = Math.floor((n - 1) / 26); } return s; }
+const CONSULTANT_LAST_COL = colLetter(CONSULTANT_COLS.length);
 const CONS_NOTES_COLS = ['id','notes','contractOverride'];
 const TEACHER_EVENTS_COLS = ['id','eventKey','eventValue'];
 
@@ -3881,7 +3885,7 @@ async function loadSheetsData() {
     // Load all four tabs in parallel
     const [teacherData, consultantData, consNotesData, teacherEventsData] = await Promise.all([
       sheetsGet('Teachers!A:N'),
-      sheetsGet('Consultants!A:R'),
+      sheetsGet(`Consultants!A:${CONSULTANT_LAST_COL}`),
       sheetsGet('ConsultantNotes!A:C'),
       sheetsGet('TeacherEvents!A:C'),
     ]);
@@ -4041,7 +4045,7 @@ async function syncConsultantRow(id) {
       await sheetsAppend('Consultants', [rowArr]);
     } else {
       const sheetRow = rowIdx + 1;
-      await sheetsPut(`Consultants!A${sheetRow}:R${sheetRow}`, [rowArr]);
+      await sheetsPut(`Consultants!A${sheetRow}:${CONSULTANT_LAST_COL}${sheetRow}`, [rowArr]);
     }
   } catch(err) {
     throw err;
@@ -4079,7 +4083,7 @@ async function syncDeleteConsultant(id) {
       // Clear the row (mark as deleted by blanking all cells)
       const blank = Array(CONSULTANT_COLS.length).fill('');
       blank[0] = '_deleted_' + id;
-      await sheetsPut(`Consultants!A${sheetRow}:R${sheetRow}`, [blank]);
+      await sheetsPut(`Consultants!A${sheetRow}:${CONSULTANT_LAST_COL}${sheetRow}`, [blank]);
     }
   } catch(err) {
     console.error('syncDeleteConsultant:', err);
