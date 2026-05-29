@@ -2879,13 +2879,14 @@ function copyRosterEmails() {
           <div class="col-picker-item" onclick="consColToggle(5,this)"><input type="checkbox" checked> Launch Day</div>
           <div class="col-picker-item" onclick="consColToggle(6,this)"><input type="checkbox" checked> FF/SS Blocks</div>
           <div class="col-picker-item" onclick="consColToggle(7,this)"><input type="checkbox" checked> Master Series</div>
-          <div class="col-picker-item" onclick="consColToggle(8,this)"><input type="checkbox" checked> Mentor Blocks</div>
-          <div class="col-picker-item" onclick="consColToggle(9,this)"><input type="checkbox" checked> Mock Leader</div>
+          <div class="col-picker-item" onclick="consColToggle(8,this)"><input type="checkbox" checked> MS Mod</div>
+          <div class="col-picker-item" onclick="consColToggle(9,this)"><input type="checkbox" checked> Mentor Blocks</div>
+          <div class="col-picker-item" onclick="consColToggle(10,this)"><input type="checkbox" checked> Mock Leader</div>
           <div class="col-picker-divider"></div>
           <div class="col-picker-group">Contract Details</div>
-          <div class="col-picker-item" onclick="consColToggle(10,this)"><input type="checkbox" checked> Stipend</div>
-          <div class="col-picker-item" onclick="consColToggle(11,this)"><input type="checkbox" checked> Travel Allow.</div>
-          <div class="col-picker-item" onclick="consColToggle(12,this)"><input type="checkbox" checked> Notes</div>
+          <div class="col-picker-item" onclick="consColToggle(11,this)"><input type="checkbox" checked> Stipend</div>
+          <div class="col-picker-item" onclick="consColToggle(12,this)"><input type="checkbox" checked> Travel Allow.</div>
+          <div class="col-picker-item" onclick="consColToggle(13,this)"><input type="checkbox" checked> Notes</div>
           <div class="col-picker-divider"></div>
           <button class="col-picker-reset" onclick="consColPickerReset()">↺ Show all columns</button>
         </div>
@@ -2905,6 +2906,7 @@ function copyRosterEmails() {
             <col style="width:82px"><!-- Launch Day -->
             <col style="width:82px"><!-- FF/SS -->
             <col style="width:95px"><!-- Master Series -->
+            <col style="width:82px"><!-- MS Mod -->
             <col style="width:82px"><!-- Mentor -->
             <col style="width:72px"><!-- Mock -->
             <col style="width:82px"><!-- Stipend -->
@@ -2916,7 +2918,7 @@ function copyRosterEmails() {
               <th colspan="1" class="frozen col-group-identity">Identity</th>
               <th colspan="3" class="col-group-identity" style="background:var(--surface)!important;color:var(--muted)!important">Info</th>
               <th colspan="2" class="col-group-events" style="background:rgba(167,139,250,0.1);color:#a78bfa">Subjects</th>
-              <th colspan="5" class="col-group-checkboxes" style="background:rgba(52,211,153,0.08);color:var(--green)">✓ Engagement</th>
+              <th colspan="6" class="col-group-checkboxes" style="background:rgba(52,211,153,0.08);color:var(--green)">✓ Engagement</th>
               <th colspan="3" class="col-group-meta">Contract Details</th>
             </tr>
             <tr>
@@ -2929,6 +2931,7 @@ function copyRosterEmails() {
               <th onclick="consSort('launchDayBlocks')">Launch Day</th>
               <th onclick="consSort('ffssBlocks')">FF/SS Blocks</th>
               <th onclick="consSort('masterSeries')">Master Series</th>
+              <th onclick="consSort('msMod')">MS Mod</th>
               <th onclick="consSort('mentorBlocks')">Mentor Blocks</th>
               <th onclick="consSort('mockExamLeader')">Mock Leader</th>
               <th onclick="consSort('stipend')">Stipend</th>
@@ -2985,6 +2988,7 @@ function copyRosterEmails() {
       <div class="cons-field"><label>Launch Day Blocks</label><input id="cm-launchDay" type="number" min="0" placeholder="0"></div>
       <div class="cons-field"><label>FF/SS Blocks</label><input id="cm-ffss" type="number" min="0" placeholder="0"></div>
       <div class="cons-field"><label>Master Series Classes</label><input id="cm-masterSeries" type="number" min="0" placeholder="0"></div>
+      <div class="cons-field"><label>MS Mod</label><input id="cm-msMod" type="number" min="0" placeholder="0"></div>
       <div class="cons-field"><label>Mentor Blocks</label><input id="cm-mentor" type="number" min="0" placeholder="0"></div>
       <div class="cons-field full-width" style="display:flex;align-items:center;gap:8px;padding-top:4px">
         <input type="checkbox" id="cm-mockLeader" style="width:15px;height:15px;accent-color:var(--green);cursor:pointer;flex-shrink:0">
@@ -3186,6 +3190,7 @@ function renderConsultantTable() {
       <td class="editable">${numInput(c.launchDayBlocks,'launchDayBlocks')}</td>
       <td class="editable">${numInput(c.ffssBlocks,'ffssBlocks')}</td>
       <td class="editable">${numInput(c.masterSeries,'masterSeries')}</td>
+      <td class="editable">${numInput(c.msMod,'msMod')}</td>
       <td class="editable">${numInput(c.mentorBlocks,'mentorBlocks')}</td>
       <td style="text-align:center">
         <input type="checkbox" ${isMockYes ? 'checked' : ''} onchange="consInlineEdit('${c.id}','mockExamLeader',this.checked?'Y':null)" style="width:15px;height:15px;accent-color:var(--green);cursor:pointer">
@@ -3373,6 +3378,10 @@ function renderConsultantPanel(id) {
           <div class="cp-info-value">${c.masterSeries != null ? c.masterSeries : '—'}</div>
         </div>
         <div>
+          <div class="cp-info-label">MS Mod</div>
+          <div class="cp-info-value">${c.msMod != null ? c.msMod : '—'}</div>
+        </div>
+        <div>
           <div class="cp-info-label">Mentor Blocks</div>
           <div class="cp-info-value">${c.mentorBlocks != null ? c.mentorBlocks : '—'}</div>
         </div>
@@ -3458,6 +3467,7 @@ function openConsModal(editId) {
   document.getElementById('cm-launchDay').value = c?.launchDayBlocks ?? '';
   document.getElementById('cm-ffss').value = c?.ffssBlocks ?? '';
   document.getElementById('cm-masterSeries').value = c?.masterSeries ?? '';
+  document.getElementById('cm-msMod').value = c?.msMod ?? '';
   document.getElementById('cm-mentor').value = c?.mentorBlocks ?? '';
   document.getElementById('cm-mockLeader').checked = c?.mockExamLeader === 'Y' || c?.mockExamLeader === true;
   document.getElementById('cm-stipend').value = c?.stipend ?? '';
@@ -3502,6 +3512,7 @@ function saveConsModal() {
     launchDayBlocks: numOrNull('cm-launchDay'),
     ffssBlocks: numOrNull('cm-ffss'),
     masterSeries: numOrNull('cm-masterSeries'),
+    msMod: numOrNull('cm-msMod'),
     mentorBlocks: numOrNull('cm-mentor'),
     mockExamLeader: document.getElementById('cm-mockLeader').checked ? 'Y' : null,
     stipend: numOrNull('cm-stipend'),
@@ -3649,10 +3660,10 @@ function saveConsNote(id) {
 
 function exportConsultantCSV() {
   const consultants = getFilteredConsultants();
-  const headers = ['Last Name','First Name','Subject 1','Subject 2','Address','City/State/Zip','Cell Phone','Home Phone','Email','Contract','Launch Day Blocks','FF/SS Blocks','Master Series','Mentor Blocks','Mock Exam Leader','Stipend','Travel Allowance','Notes'];
+  const headers = ['Last Name','First Name','Subject 1','Subject 2','Address','City/State/Zip','Cell Phone','Home Phone','Email','Contract','Launch Day Blocks','FF/SS Blocks','Master Series','MS Mod','Mentor Blocks','Mock Exam Leader','Stipend','Travel Allowance','Notes'];
   const rows = consultants.map(c => {
     const data = getConsultantData(c.id);
-    return [c.lastName, c.firstName, c.subj1||'', c.subj2||'', c.address1||'', c.address2||'', c.cellPhone||'', c.homePhone||'', c.email||'', c.contract, c.launchDayBlocks||'', c.ffssBlocks||'', c.masterSeries||'', c.mentorBlocks||'', c.mockExamLeader||'', c.stipend||'', c.travelAllowance||'', data.notes||''];
+    return [c.lastName, c.firstName, c.subj1||'', c.subj2||'', c.address1||'', c.address2||'', c.cellPhone||'', c.homePhone||'', c.email||'', c.contract, c.launchDayBlocks||'', c.ffssBlocks||'', c.masterSeries||'', c.msMod||'', c.mentorBlocks||'', c.mockExamLeader||'', c.stipend||'', c.travelAllowance||'', data.notes||''];
   });
   const csv = [headers, ...rows].map(r => r.map(v => '"' + String(v).replace(/"/g,'""') + '"').join(',')).join('\n');
   const a = document.createElement('a');
@@ -3844,7 +3855,7 @@ function sheetToObjects(data) {
 
 // ─── COLUMN MAPS ────────────────────────────────────────────────────
 const TEACHER_COLS = ['id','lastName','firstName','school','district','course','crpYear','program','confirmed','status','firstDayNotes','mentorRequested','teacherEmail','principalEmail'];
-const CONSULTANT_COLS = ['id','lastName','firstName','subj1','subj2','address1','address2','homePhone','cellPhone','email','contract','launchDayBlocks','ffssBlocks','masterSeries','stipend','travelAllowance','mentorBlocks','mockExamLeader'];
+const CONSULTANT_COLS = ['id','lastName','firstName','subj1','subj2','address1','address2','homePhone','cellPhone','email','contract','launchDayBlocks','ffssBlocks','masterSeries','msMod','stipend','travelAllowance','mentorBlocks','mockExamLeader'];
 const CONS_NOTES_COLS = ['id','notes','contractOverride'];
 const TEACHER_EVENTS_COLS = ['id','eventKey','eventValue'];
 
@@ -3893,7 +3904,7 @@ async function loadSheetsData() {
       }
       consRows.reverse().forEach(r => {
         // Coerce numeric fields
-        ['launchDayBlocks','ffssBlocks','masterSeries','stipend','travelAllowance','mentorBlocks'].forEach(k => {
+        ['launchDayBlocks','ffssBlocks','masterSeries','msMod','stipend','travelAllowance','mentorBlocks'].forEach(k => {
           if (r[k] !== '' && r[k] != null) r[k] = Number(r[k]);
           else r[k] = null;
         });
