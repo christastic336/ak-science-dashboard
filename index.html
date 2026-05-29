@@ -3369,6 +3369,8 @@ function consInlineEdit(id, field, value) {
   const c = CONSULTANTS.find(x => x.id === id);
   if (!c) return;
   c[field] = (value === '' || value === null) ? null : value;
+  // Persist locally so the edit survives refresh even when offline
+  saveConsEdit(id);
   // Only refresh the detail panel if it's open — don't re-render the table
   if (consState.selectedId === id) renderConsultantPanel(id);
   // Sync to Sheets
@@ -3502,6 +3504,33 @@ function loadAddedConsultants() {
   } catch(e) {}
 }
 
+// ─── LOCAL EDITS OVERLAY (seed consultants) ──────────────────────────
+// Inline/modal edits to existing (seed) consultants are held in memory and
+// synced to Sheets when signed in. To survive refresh while OFFLINE, we also
+// store an overlay of changed fields per consultant id in localStorage and
+// re-apply it on load. Runtime-added consultants ('ca…') persist separately.
+const CONS_EDITS_KEY = 'akConsultantEdits';
+function getConsEdits() {
+  try { return JSON.parse(localStorage.getItem(CONS_EDITS_KEY)) || {}; } catch(e) { return {}; }
+}
+function saveConsEdit(id) {
+  if (id.startsWith('ca')) return; // added consultants persist via persistAddedConsultants
+  const c = CONSULTANTS.find(x => x.id === id);
+  if (!c) return;
+  try {
+    const edits = getConsEdits();
+    edits[id] = { ...c }; // store the full current record for this consultant
+    localStorage.setItem(CONS_EDITS_KEY, JSON.stringify(edits));
+  } catch(e) {}
+}
+function applyConsEdits() {
+  const edits = getConsEdits();
+  Object.entries(edits).forEach(([id, fields]) => {
+    const c = CONSULTANTS.find(x => x.id === id);
+    if (c) Object.assign(c, fields);
+  });
+}
+
 function persistAddedConsultants() {
   // Only persist consultants that were added at runtime (id starts with 'ca')
   try {
@@ -3601,6 +3630,7 @@ function saveConsModal() {
   if (_consModalEditId) {
     const idx = CONSULTANTS.findIndex(x => x.id === _consModalEditId);
     if (idx !== -1) Object.assign(CONSULTANTS[idx], data);
+    saveConsEdit(_consModalEditId); // persist edit to seed consultant locally
   } else {
     data.id = 'ca' + Date.now();
     CONSULTANTS.push(data);
@@ -3640,6 +3670,7 @@ function deleteConsultant(id) {
 // On init: load added consultants and remove deleted seed ones
 (function initConsData() {
   loadAddedConsultants();
+  applyConsEdits(); // re-apply locally-saved edits to seed consultants
   const deleted = getDeletedIds();
   if (deleted.size > 0) {
     deleted.forEach(id => {
@@ -3794,6 +3825,28 @@ let _progCurrentBoard = 'launchday';
 // positions[board][consultantId] = {x, y} as fractions of board width/height (0..1).
 // Missing entry => card lives in the tray (unplaced).
 let _progPositions = { launchday: {}, fallforum: {}, examprep: {} };
+
+// ─── LOCAL PERSISTENCE FOR BOARD LAYOUTS ─────────────────────────────
+// Positions are saved to localStorage so they survive refresh while offline,
+// and also pushed to the Sheet when signed in (handled in syncProgrammingPosition).
+const PROG_POS_KEY = 'akProgrammingPositions';
+function saveProgPositionsLocal() {
+  try { localStorage.setItem(PROG_POS_KEY, JSON.stringify(_progPositions)); } catch(e) {}
+}
+function loadProgPositionsLocal() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(PROG_POS_KEY) || 'null');
+    if (saved && typeof saved === 'object') {
+      _progPositions = {
+        launchday: saved.launchday || {},
+        fallforum: saved.fallforum || {},
+        examprep:  saved.examprep  || {},
+      };
+    }
+  } catch(e) {}
+}
+// Load any locally-saved layout immediately on parse (Sheet sync overrides later).
+loadProgPositionsLocal();
 
 function initProgrammingView() {
   setProgBoard(_progCurrentBoard);
@@ -4265,14 +4318,19 @@ async function loadSheetsData() {
 
     // ── ProgrammingLayout → card positions per board ──
     // Columns: board, consultantId, x, y  (x/y are fractions 0..1)
+    // Only adopt Sheet layout if it actually has rows — otherwise keep the
+    // local layout so a first sign-in doesn't wipe offline arrangements.
     const layoutRows = sheetToObjects(progLayoutData);
-    _progPositions = { launchday: {}, fallforum: {}, examprep: {} };
-    layoutRows.forEach(r => {
-      const b = r.board;
-      if (!b || !_progPositions[b] || !r.consultantId) return;
-      const x = parseFloat(r.x), y = parseFloat(r.y);
-      if (!isNaN(x) && !isNaN(y)) _progPositions[b][r.consultantId] = { x, y };
-    });
+    if (layoutRows.length > 0) {
+      _progPositions = { launchday: {}, fallforum: {}, examprep: {} };
+      layoutRows.forEach(r => {
+        const b = r.board;
+        if (!b || !_progPositions[b] || !r.consultantId) return;
+        const x = parseFloat(r.x), y = parseFloat(r.y);
+        if (!isNaN(x) && !isNaN(y)) _progPositions[b][r.consultantId] = { x, y };
+      });
+      saveProgPositionsLocal(); // keep local mirror in sync with the Sheet
+    }
 
     setSyncState('synced');
     // Re-render active views to show fresh data
@@ -4356,9 +4414,12 @@ async function syncTeacherEvent(id, eventKey, eventValue) {
 
 // ─── PROGRAMMING LAYOUT WRITE-BACK ───────────────────────────────────
 // Writes a single card position (board, consultantId, x, y). Pass x=null,y=null
-// to clear (card returned to tray). Cloud-only: no-op when not signed in.
+// to clear (card returned to tray). Saves locally always; pushes to the Sheet
+// when signed in.
 async function syncProgrammingPosition(board, consultantId, x, y) {
-  if (!_gsiAccessToken) return; // offline → position held in memory only this session
+  // Always persist locally so layouts survive refresh offline.
+  saveProgPositionsLocal();
+  if (!_gsiAccessToken) return; // offline → local only
   try {
     const data = await sheetsGet('ProgrammingLayout!A:B').catch(() => ({ values: [['board','consultantId']] }));
     const rows = (data.values || []);
