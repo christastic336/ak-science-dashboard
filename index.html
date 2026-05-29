@@ -595,6 +595,7 @@ select:focus { outline: none; border-color: var(--accent); }
 <div class="top-nav">
   <button class="top-tab active" id="tab-roster" onclick="switchView('roster')">👩‍🏫 Teachers</button>
   <button class="top-tab" id="tab-consultant" onclick="switchView('consultant')">🔬 Consultants</button>
+  <button class="top-tab" id="tab-programming" onclick="switchView('programming')">🗂️ Programming</button>
   <button class="top-tab" id="tab-coveragemap" onclick="switchView('coveragemap')">📍 Coverage Map</button>
   <button class="top-tab" id="tab-dashboard" onclick="switchView('dashboard')">📊 School Dashboard</button>
   <button class="top-tab" id="tab-heatmap" onclick="switchView('heatmap')">🗺️ County Heatmap</button>
@@ -1285,12 +1286,14 @@ function switchView(view) {
   document.getElementById('heatmap-view').classList.toggle('visible', view === 'heatmap');
   document.getElementById('roster-view').classList.toggle('visible', view === 'roster');
   document.getElementById('consultant-view').classList.toggle('visible', view === 'consultant');
+  document.getElementById('programming-view').classList.toggle('visible', view === 'programming');
   // Coverage map: show as flex when active, hide otherwise
   document.getElementById('coveragemap-view').style.display = view === 'coveragemap' ? 'flex' : 'none';
   document.getElementById('tab-dashboard').classList.toggle('active', view === 'dashboard');
   document.getElementById('tab-heatmap').classList.toggle('active', view === 'heatmap');
   document.getElementById('tab-roster').classList.toggle('active', view === 'roster');
   document.getElementById('tab-consultant').classList.toggle('active', view === 'consultant');
+  document.getElementById('tab-programming').classList.toggle('active', view === 'programming');
   document.getElementById('tab-coveragemap').classList.toggle('active', view === 'coveragemap');
   if (view === 'heatmap') {
     if (!hmState.geoLoaded) initHeatmap();
@@ -1303,6 +1306,9 @@ function switchView(view) {
   if (view === 'consultant') {
     renderConsultantTable();
     applyConsColVisibility();
+  }
+  if (view === 'programming') {
+    initProgrammingView();
   }
   if (view === 'coveragemap') {
     // Defer so the div is visible and has dimensions before we draw
@@ -2882,11 +2888,12 @@ function copyRosterEmails() {
           <div class="col-picker-item" onclick="consColToggle(8,this)"><input type="checkbox" checked> MS Mod</div>
           <div class="col-picker-item" onclick="consColToggle(9,this)"><input type="checkbox" checked> Mentor Blocks</div>
           <div class="col-picker-item" onclick="consColToggle(10,this)"><input type="checkbox" checked> Mock Leader</div>
+          <div class="col-picker-item" onclick="consColToggle(11,this)"><input type="checkbox" checked> Programming</div>
           <div class="col-picker-divider"></div>
           <div class="col-picker-group">Contract Details</div>
-          <div class="col-picker-item" onclick="consColToggle(11,this)"><input type="checkbox" checked> Stipend</div>
-          <div class="col-picker-item" onclick="consColToggle(12,this)"><input type="checkbox" checked> Travel Allow.</div>
-          <div class="col-picker-item" onclick="consColToggle(13,this)"><input type="checkbox" checked> Notes</div>
+          <div class="col-picker-item" onclick="consColToggle(12,this)"><input type="checkbox" checked> Stipend</div>
+          <div class="col-picker-item" onclick="consColToggle(13,this)"><input type="checkbox" checked> Travel Allow.</div>
+          <div class="col-picker-item" onclick="consColToggle(14,this)"><input type="checkbox" checked> Notes</div>
           <div class="col-picker-divider"></div>
           <button class="col-picker-reset" onclick="consColPickerReset()">↺ Show all columns</button>
         </div>
@@ -2909,6 +2916,7 @@ function copyRosterEmails() {
             <col style="width:82px"><!-- MS Mod -->
             <col style="width:82px"><!-- Mentor -->
             <col style="width:72px"><!-- Mock -->
+            <col style="width:92px"><!-- Programming -->
             <col style="width:82px"><!-- Stipend -->
             <col style="width:92px"><!-- Travel -->
             <col style="width:180px"><!-- Notes -->
@@ -2918,7 +2926,7 @@ function copyRosterEmails() {
               <th colspan="1" class="frozen col-group-identity">Identity</th>
               <th colspan="3" class="col-group-identity" style="background:var(--surface)!important;color:var(--muted)!important">Info</th>
               <th colspan="2" class="col-group-events" style="background:rgba(167,139,250,0.1);color:#a78bfa">Subjects</th>
-              <th colspan="6" class="col-group-checkboxes" style="background:rgba(52,211,153,0.08);color:var(--green)">✓ Engagement</th>
+              <th colspan="7" class="col-group-checkboxes" style="background:rgba(52,211,153,0.08);color:var(--green)">✓ Engagement</th>
               <th colspan="3" class="col-group-meta">Contract Details</th>
             </tr>
             <tr>
@@ -2934,6 +2942,7 @@ function copyRosterEmails() {
               <th onclick="consSort('msMod')">MS Mod</th>
               <th onclick="consSort('mentorBlocks')">Mentor Blocks</th>
               <th onclick="consSort('mockExamLeader')">Mock Leader</th>
+              <th onclick="consSort('programming')">Programming</th>
               <th onclick="consSort('stipend')">Stipend</th>
               <th onclick="consSort('travelAllowance')">Travel Allow.</th>
               <th>Notes</th>
@@ -2994,12 +3003,63 @@ function copyRosterEmails() {
         <input type="checkbox" id="cm-mockLeader" style="width:15px;height:15px;accent-color:var(--green);cursor:pointer;flex-shrink:0">
         <label for="cm-mockLeader" style="font-size:0.82rem;color:var(--text);text-transform:none;letter-spacing:0;cursor:pointer;margin:0">Mock Exam Leader</label>
       </div>
+      <div class="cons-field full-width" style="display:flex;align-items:center;gap:8px;padding-top:4px">
+        <input type="checkbox" id="cm-programming" style="width:15px;height:15px;accent-color:var(--accent);cursor:pointer;flex-shrink:0">
+        <label for="cm-programming" style="font-size:0.82rem;color:var(--text);text-transform:none;letter-spacing:0;cursor:pointer;margin:0">Programming (show on Programming boards)</label>
+      </div>
       <div class="cons-field"><label>Stipend ($)</label><input id="cm-stipend" type="number" min="0" placeholder="0"></div>
       <div class="cons-field"><label>Travel Allowance ($)</label><input id="cm-travel" type="number" min="0" placeholder="0"></div>
     </div>
     <div class="cons-modal-footer">
       <button class="btn-cancel" onclick="closeConsModal()">Cancel</button>
       <button class="btn-primary" onclick="saveConsModal()">Save Consultant</button>
+    </div>
+  </div>
+</div>
+
+<!-- ─── PROGRAMMING VIEW ─── -->
+<style>
+#programming-view { display: none; height: calc(100vh - 90px); flex-direction: column; background: var(--bg); }
+#programming-view.visible { display: flex; }
+.prog-topbar { display: flex; align-items: center; gap: 14px; padding: 12px 20px; border-bottom: 1px solid var(--border); flex-shrink: 0; flex-wrap: wrap; }
+.prog-topbar h2 { margin: 0; font-size: 1.05rem; }
+.prog-switch { display: flex; gap: 6px; }
+.prog-switch button { background: var(--surface); border: 1px solid var(--border); color: var(--muted); padding: 6px 16px; border-radius: 6px; cursor: pointer; font-size: 0.85rem; font-weight: 600; }
+.prog-switch button.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+.prog-hint { font-size: 0.75rem; color: var(--muted); margin-left: auto; max-width: 380px; }
+.prog-board-area { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
+.prog-board { position: relative; flex: 1; min-height: 0; margin: 14px 20px 0; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; background-color: var(--surface); background-image: linear-gradient(rgba(124,92,191,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(124,92,191,0.05) 1px, transparent 1px); background-size: 40px 40px; }
+.prog-board-title { position: absolute; top: 10px; left: 14px; font-size: 0.95rem; font-weight: 700; color: var(--muted); letter-spacing: 0.04em; text-transform: uppercase; pointer-events: none; }
+.prog-zone { position: absolute; border: 1.5px dashed var(--border); border-radius: 8px; background: rgba(124,92,191,0.05); }
+.prog-zone-label { position: absolute; top: 6px; left: 8px; font-size: 0.7rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; pointer-events: none; }
+.prog-card { position: absolute; background: var(--surface2); border: 1px solid var(--accent); border-radius: 7px; padding: 6px 10px; cursor: grab; user-select: none; min-width: 90px; box-shadow: 0 2px 6px rgba(0,0,0,0.3); z-index: 2; }
+.prog-card:active { cursor: grabbing; }
+.prog-card.dragging { opacity: 0.85; z-index: 50; box-shadow: 0 6px 18px rgba(0,0,0,0.5); }
+.prog-card .pc-name { font-size: 0.82rem; font-weight: 600; color: var(--text); white-space: nowrap; }
+.prog-card .pc-subj { font-size: 0.68rem; color: var(--accent); margin-top: 1px; }
+.prog-tray { flex-shrink: 0; border-top: 1px solid var(--border); padding: 10px 20px; max-height: 150px; overflow-y: auto; }
+.prog-tray-title { font-size: 0.72rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px; }
+.prog-tray-cards { display: flex; flex-wrap: wrap; gap: 8px; }
+.prog-tray .prog-card { position: static; box-shadow: none; }
+.prog-empty { color: var(--muted); font-size: 0.85rem; font-style: italic; }
+</style>
+<div id="programming-view">
+  <div class="prog-topbar">
+    <h2>Programming Board</h2>
+    <div class="prog-switch" id="prog-switch">
+      <button data-board="launchday" class="active" onclick="setProgBoard('launchday')">Launch Day</button>
+      <button data-board="fallforum" onclick="setProgBoard('fallforum')">Fall Forum</button>
+      <button data-board="examprep" onclick="setProgBoard('examprep')">Exam Prep</button>
+    </div>
+    <span class="prog-hint">Check the “Programming” box on a consultant to add their card here. Drag cards onto the board to organize.</span>
+  </div>
+  <div class="prog-board-area">
+    <div class="prog-board" id="prog-board">
+      <div class="prog-board-title" id="prog-board-title">Launch Day</div>
+    </div>
+    <div class="prog-tray">
+      <div class="prog-tray-title">Unplaced — drag onto the board above</div>
+      <div class="prog-tray-cards" id="prog-tray-cards"></div>
     </div>
   </div>
 </div>
@@ -3194,6 +3254,9 @@ function renderConsultantTable() {
       <td class="editable">${numInput(c.mentorBlocks,'mentorBlocks')}</td>
       <td style="text-align:center">
         <input type="checkbox" ${isMockYes ? 'checked' : ''} onchange="consInlineEdit('${c.id}','mockExamLeader',this.checked?'Y':null)" style="width:15px;height:15px;accent-color:var(--green);cursor:pointer">
+      </td>
+      <td style="text-align:center">
+        <input type="checkbox" ${c.programming ? 'checked' : ''} onchange="consInlineEdit('${c.id}','programming',this.checked?true:null);if(typeof renderProgrammingBoard==='function'&&document.getElementById('programming-view').classList.contains('visible'))renderProgrammingBoard()" style="width:15px;height:15px;accent-color:var(--accent);cursor:pointer" title="Show on Programming boards">
       </td>
       <td class="editable"><input type="number" min="0" class="cons-cell-number" value="${c.stipend??''}" placeholder="—" onchange="consInlineEdit('${c.id}','stipend',this.value===''?null:Number(this.value))"></td>
       <td class="editable"><input type="number" min="0" class="cons-cell-number" value="${c.travelAllowance??''}" placeholder="—" onchange="consInlineEdit('${c.id}','travelAllowance',this.value===''?null:Number(this.value))"></td>
@@ -3477,6 +3540,7 @@ function openConsModal(editId) {
   document.getElementById('cm-msMod').value = c?.msMod ?? '';
   document.getElementById('cm-mentor').value = c?.mentorBlocks ?? '';
   document.getElementById('cm-mockLeader').checked = c?.mockExamLeader === 'Y' || c?.mockExamLeader === true;
+  document.getElementById('cm-programming').checked = !!c?.programming;
   document.getElementById('cm-stipend').value = c?.stipend ?? '';
   document.getElementById('cm-travel').value = c?.travelAllowance ?? '';
 
@@ -3522,6 +3586,7 @@ function saveConsModal() {
     msMod: numOrNull('cm-msMod'),
     mentorBlocks: numOrNull('cm-mentor'),
     mockExamLeader: document.getElementById('cm-mockLeader').checked ? 'Y' : null,
+    programming: document.getElementById('cm-programming').checked ? true : null,
     stipend: numOrNull('cm-stipend'),
     travelAllowance: numOrNull('cm-travel'),
   };
@@ -3667,10 +3732,10 @@ function saveConsNote(id) {
 
 function exportConsultantCSV() {
   const consultants = getFilteredConsultants();
-  const headers = ['Last Name','First Name','Subject 1','Subject 2','Address','City/State/Zip','Cell Phone','Home Phone','Email','Contract','Launch Day Blocks','FF/SS Blocks','Master Series','MS Mod','Mentor Blocks','Mock Exam Leader','Stipend','Travel Allowance','Notes'];
+  const headers = ['Last Name','First Name','Subject 1','Subject 2','Address','City/State/Zip','Cell Phone','Home Phone','Email','Contract','Launch Day Blocks','FF/SS Blocks','Master Series','MS Mod','Mentor Blocks','Mock Exam Leader','Programming','Stipend','Travel Allowance','Notes'];
   const rows = consultants.map(c => {
     const data = getConsultantData(c.id);
-    return [c.lastName, c.firstName, c.subj1||'', c.subj2||'', c.address1||'', c.address2||'', c.cellPhone||'', c.homePhone||'', c.email||'', c.contract, c.launchDayBlocks||'', c.ffssBlocks||'', c.masterSeries||'', c.msMod||'', c.mentorBlocks||'', c.mockExamLeader||'', c.stipend||'', c.travelAllowance||'', data.notes||''];
+    return [c.lastName, c.firstName, c.subj1||'', c.subj2||'', c.address1||'', c.address2||'', c.cellPhone||'', c.homePhone||'', c.email||'', c.contract, c.launchDayBlocks||'', c.ffssBlocks||'', c.masterSeries||'', c.msMod||'', c.mentorBlocks||'', c.mockExamLeader||'', c.programming?'Y':'', c.stipend||'', c.travelAllowance||'', data.notes||''];
   });
   const csv = [headers, ...rows].map(r => r.map(v => '"' + String(v).replace(/"/g,'""') + '"').join(',')).join('\n');
   const a = document.createElement('a');
@@ -3680,6 +3745,177 @@ function exportConsultantCSV() {
 }
 function copyConsultantEmails() {
   copyEmailList(getFilteredConsultants().map(c => c.email), 'consultant');
+}
+
+// ════════════════════════════════════════════════════════════════════
+// PROGRAMMING BOARDS
+// Three boards (Launch Day, Fall Forum, Exam Prep). Any consultant with
+// programming===true gets a draggable card. Positions are keyed by
+// board + consultant id. Cloud-only persistence (see syncProgramming*).
+// ════════════════════════════════════════════════════════════════════
+const PROG_BOARDS = {
+  launchday: {
+    title: 'Launch Day',
+    zones: [
+      { label: 'Morning Session', x: 0.04, y: 0.16, w: 0.44, h: 0.36 },
+      { label: 'Afternoon Session', x: 0.52, y: 0.16, w: 0.44, h: 0.36 },
+      { label: 'Lab / Hands-On', x: 0.04, y: 0.58, w: 0.92, h: 0.36 },
+    ],
+  },
+  fallforum: {
+    title: 'Fall Forum',
+    zones: [
+      { label: 'Keynote', x: 0.04, y: 0.16, w: 0.92, h: 0.20 },
+      { label: 'Breakout A', x: 0.04, y: 0.40, w: 0.30, h: 0.52 },
+      { label: 'Breakout B', x: 0.35, y: 0.40, w: 0.30, h: 0.52 },
+      { label: 'Breakout C', x: 0.66, y: 0.40, w: 0.30, h: 0.52 },
+    ],
+  },
+  examprep: {
+    title: 'Exam Prep',
+    zones: [
+      { label: 'AP Biology', x: 0.04, y: 0.16, w: 0.22, h: 0.78 },
+      { label: 'AP Chemistry', x: 0.28, y: 0.16, w: 0.22, h: 0.78 },
+      { label: 'AP Physics', x: 0.52, y: 0.16, w: 0.22, h: 0.78 },
+      { label: 'AP Env. Science', x: 0.76, y: 0.16, w: 0.20, h: 0.78 },
+    ],
+  },
+};
+
+let _progCurrentBoard = 'launchday';
+// positions[board][consultantId] = {x, y} as fractions of board width/height (0..1).
+// Missing entry => card lives in the tray (unplaced).
+let _progPositions = { launchday: {}, fallforum: {}, examprep: {} };
+
+function initProgrammingView() {
+  setProgBoard(_progCurrentBoard);
+}
+
+function setProgBoard(board) {
+  _progCurrentBoard = board;
+  document.querySelectorAll('#prog-switch button').forEach(b => {
+    b.classList.toggle('active', b.dataset.board === board);
+  });
+  document.getElementById('prog-board-title').textContent = PROG_BOARDS[board].title;
+  renderProgrammingBoard();
+}
+
+function progConsultants() {
+  return CONSULTANTS.filter(c => c.programming === true);
+}
+
+function progCardHTML(c) {
+  const subj = [c.subj1, c.subj2].filter(Boolean).join(' · ');
+  return `<div class="pc-name">${(c.firstName||'')} ${(c.lastName||'')}</div>${subj ? `<div class="pc-subj">${subj}</div>` : ''}`;
+}
+
+function renderProgrammingBoard() {
+  const board = document.getElementById('prog-board');
+  const tray = document.getElementById('prog-tray-cards');
+  if (!board || !tray) return;
+  const def = PROG_BOARDS[_progCurrentBoard];
+  const pos = _progPositions[_progCurrentBoard] || {};
+
+  // Clear existing zones/cards (keep the title element)
+  board.querySelectorAll('.prog-zone, .prog-card').forEach(el => el.remove());
+  tray.innerHTML = '';
+
+  // Draw labeled drop-zones
+  def.zones.forEach(z => {
+    const zEl = document.createElement('div');
+    zEl.className = 'prog-zone';
+    zEl.style.left = (z.x * 100) + '%';
+    zEl.style.top = (z.y * 100) + '%';
+    zEl.style.width = (z.w * 100) + '%';
+    zEl.style.height = (z.h * 100) + '%';
+    zEl.innerHTML = `<span class="prog-zone-label">${z.label}</span>`;
+    board.appendChild(zEl);
+  });
+
+  const people = progConsultants();
+  if (people.length === 0) {
+    tray.innerHTML = '<span class="prog-empty">No consultants have the Programming box checked yet.</span>';
+    return;
+  }
+
+  let unplaced = 0;
+  people.forEach(c => {
+    const card = document.createElement('div');
+    card.className = 'prog-card';
+    card.dataset.id = c.id;
+    card.innerHTML = progCardHTML(c);
+    const p = pos[c.id];
+    if (p) {
+      // Placed on board
+      card.style.left = (p.x * 100) + '%';
+      card.style.top = (p.y * 100) + '%';
+      board.appendChild(card);
+    } else {
+      // In tray
+      tray.appendChild(card);
+      unplaced++;
+    }
+    attachProgDrag(card, c.id);
+  });
+  if (unplaced === 0) {
+    tray.innerHTML = '<span class="prog-empty">All cards placed on the board.</span>';
+  }
+}
+
+function attachProgDrag(card, id) {
+  card.addEventListener('pointerdown', e => {
+    e.preventDefault();
+    const board = document.getElementById('prog-board');
+    const brect = board.getBoundingClientRect();
+    const startInTray = card.parentElement.id === 'prog-tray-cards';
+    const crect = card.getBoundingClientRect();
+    // Grab offset within the card
+    const offX = e.clientX - crect.left;
+    const offY = e.clientY - crect.top;
+
+    // If starting in tray, lift it onto the board immediately at cursor
+    if (startInTray) {
+      board.appendChild(card);
+      card.style.left = (crect.left - brect.left) + 'px';
+      card.style.top = (crect.top - brect.top) + 'px';
+    }
+    card.classList.add('dragging');
+    card.setPointerCapture(e.pointerId);
+
+    const onMove = ev => {
+      let nx = ev.clientX - brect.left - offX;
+      let ny = ev.clientY - brect.top - offY;
+      // Clamp within board
+      nx = Math.max(0, Math.min(nx, brect.width - card.offsetWidth));
+      ny = Math.max(0, Math.min(ny, brect.height - card.offsetHeight));
+      card.style.left = nx + 'px';
+      card.style.top = ny + 'px';
+    };
+    const onUp = ev => {
+      card.classList.remove('dragging');
+      card.releasePointerCapture(e.pointerId);
+      card.removeEventListener('pointermove', onMove);
+      card.removeEventListener('pointerup', onUp);
+      // Save fractional position
+      const fx = card.offsetLeft / brect.width;
+      const fy = card.offsetTop / brect.height;
+      // Convert px style to % so it survives board resize
+      card.style.left = (fx * 100) + '%';
+      card.style.top = (fy * 100) + '%';
+      if (!_progPositions[_progCurrentBoard]) _progPositions[_progCurrentBoard] = {};
+      _progPositions[_progCurrentBoard][id] = { x: fx, y: fy };
+      syncProgrammingPosition(_progCurrentBoard, id, fx, fy);
+    };
+    card.addEventListener('pointermove', onMove);
+    card.addEventListener('pointerup', onUp);
+  });
+
+  // Double-click returns a card to the tray
+  card.addEventListener('dblclick', () => {
+    delete (_progPositions[_progCurrentBoard] || {})[id];
+    syncProgrammingPosition(_progCurrentBoard, id, null, null);
+    renderProgrammingBoard();
+  });
 }
 </script>
 
@@ -3862,7 +4098,7 @@ function sheetToObjects(data) {
 
 // ─── COLUMN MAPS ────────────────────────────────────────────────────
 const TEACHER_COLS = ['id','lastName','firstName','school','district','course','crpYear','program','confirmed','status','firstDayNotes','mentorRequested','teacherEmail','principalEmail'];
-const CONSULTANT_COLS = ['id','lastName','firstName','subj1','subj2','address1','address2','homePhone','cellPhone','email','contract','launchDayBlocks','ffssBlocks','masterSeries','msMod','stipend','travelAllowance','mentorBlocks','mockExamLeader'];
+const CONSULTANT_COLS = ['id','lastName','firstName','subj1','subj2','address1','address2','homePhone','cellPhone','email','contract','launchDayBlocks','ffssBlocks','masterSeries','msMod','stipend','travelAllowance','mentorBlocks','mockExamLeader','programming'];
 // Last Sheet column letter for the Consultants tab, derived from column count so
 // adding/removing fields never desyncs the A1 range (1->A, 18->R, 19->S, …).
 function colLetter(n) { let s = ''; while (n > 0) { const m = (n - 1) % 26; s = String.fromCharCode(65 + m) + s; n = Math.floor((n - 1) / 26); } return s; }
@@ -3883,11 +4119,12 @@ async function loadSheetsData() {
   setSyncState('syncing');
   try {
     // Load all four tabs in parallel
-    const [teacherData, consultantData, consNotesData, teacherEventsData] = await Promise.all([
+    const [teacherData, consultantData, consNotesData, teacherEventsData, progLayoutData] = await Promise.all([
       sheetsGet('Teachers!A:N'),
       sheetsGet(`Consultants!A:${CONSULTANT_LAST_COL}`),
       sheetsGet('ConsultantNotes!A:C'),
       sheetsGet('TeacherEvents!A:C'),
+      sheetsGet('ProgrammingLayout!A:D').catch(() => ({ values: [] })),
     ]);
 
     // ── Teachers ──
@@ -3919,6 +4156,8 @@ async function loadSheetsData() {
           if (r[k] !== '' && r[k] != null) r[k] = Number(r[k]);
           else r[k] = null;
         });
+        // Programming is a boolean flag stored as 'true'/'Y' string in the sheet
+        r.programming = (r.programming === 'true' || r.programming === 'Y' || r.programming === true) ? true : null;
         CONSULTANTS.unshift(r);
       });
     }
@@ -3953,11 +4192,23 @@ async function loadSheetsData() {
       saveTeacherData(id, data);
     });
 
+    // ── ProgrammingLayout → card positions per board ──
+    // Columns: board, consultantId, x, y  (x/y are fractions 0..1)
+    const layoutRows = sheetToObjects(progLayoutData);
+    _progPositions = { launchday: {}, fallforum: {}, examprep: {} };
+    layoutRows.forEach(r => {
+      const b = r.board;
+      if (!b || !_progPositions[b] || !r.consultantId) return;
+      const x = parseFloat(r.x), y = parseFloat(r.y);
+      if (!isNaN(x) && !isNaN(y)) _progPositions[b][r.consultantId] = { x, y };
+    });
+
     setSyncState('synced');
     // Re-render active views to show fresh data
     const activeView = document.querySelector('.top-tab.active')?.id;
     if (activeView === 'tab-roster') renderRosterTable();
     if (activeView === 'tab-consultant') renderConsultantTable();
+    if (activeView === 'tab-programming') renderProgrammingBoard();
 
   } catch(err) {
     console.error('loadSheetsData error:', err);
@@ -4029,6 +4280,28 @@ async function syncTeacherEvent(id, eventKey, eventValue) {
     }
   } catch(err) {
     throw err;
+  }
+}
+
+// ─── PROGRAMMING LAYOUT WRITE-BACK ───────────────────────────────────
+// Writes a single card position (board, consultantId, x, y). Pass x=null,y=null
+// to clear (card returned to tray). Cloud-only: no-op when not signed in.
+async function syncProgrammingPosition(board, consultantId, x, y) {
+  if (!_gsiAccessToken) return; // offline → position held in memory only this session
+  try {
+    const data = await sheetsGet('ProgrammingLayout!A:B').catch(() => ({ values: [['board','consultantId']] }));
+    const rows = (data.values || []);
+    const rowIdx = rows.findIndex((r, i) => i > 0 && r[0] === board && r[1] === consultantId);
+    const xVal = x == null ? '' : String(x);
+    const yVal = y == null ? '' : String(y);
+    if (rowIdx === -1) {
+      await sheetsAppend('ProgrammingLayout', [[board, consultantId, xVal, yVal]]);
+    } else {
+      const sheetRow = rowIdx + 1;
+      await sheetsPut(`ProgrammingLayout!A${sheetRow}:D${sheetRow}`, [[board, consultantId, xVal, yVal]]);
+    }
+  } catch(err) {
+    showSyncToast('Programming layout sync failed: ' + err.message);
   }
 }
 
