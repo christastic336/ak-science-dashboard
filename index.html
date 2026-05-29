@@ -3595,11 +3595,14 @@ function sheetToObjects(data) {
   const rows = data.values || [];
   if (rows.length < 2) return [];
   const headers = rows[0];
-  return rows.slice(1).map(row => {
-    const obj = {};
-    headers.forEach((h, i) => { obj[h] = row[i] ?? null; });
-    return obj;
-  });
+  return rows.slice(1)
+    .filter(row => row.some(cell => cell !== '' && cell != null)) // skip blank rows
+    .map(row => {
+      const obj = {};
+      headers.forEach((h, i) => { obj[h] = row[i] ?? null; });
+      return obj;
+    })
+    .filter(obj => obj.id && !String(obj.id).startsWith('_deleted_')); // skip deleted/empty id rows
 }
 
 // ─── COLUMN MAPS ────────────────────────────────────────────────────
@@ -3755,8 +3758,7 @@ async function syncConsultantNote(id) {
 async function syncTeacherEvent(id, eventKey, eventValue) {
   if (!_gsiAccessToken) return;
   try {
-    const col = await findSheetRow('TeacherEvents');
-    // Find row where col A = id AND col B = eventKey
+    // Fetch A:B in one call — find row where col A = id AND col B = eventKey
     const data = await sheetsGet('TeacherEvents!A:B');
     const rows = (data.values || []);
     const rowIdx = rows.findIndex((r, i) => i > 0 && r[0] === id && r[1] === eventKey);
