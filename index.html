@@ -411,8 +411,9 @@ select:focus { outline: none; border-color: var(--accent); }
 .cons-cell-input { background: transparent; border: none; color: var(--text); font-size: 0.78rem; font-family: inherit; width: 100%; padding: 7px 10px; box-sizing: border-box; outline: none; }
 .cons-cell-input:focus { background: rgba(79,142,247,0.08); outline: 1px solid var(--accent); border-radius: 3px; }
 .cons-cell-input::placeholder { color: var(--muted); font-style: italic; }
-.cons-cell-select { background: transparent; border: none; color: var(--text); font-size: 0.78rem; font-family: inherit; width: 100%; padding: 7px 6px; box-sizing: border-box; outline: none; cursor: pointer; }
+.cons-cell-select { background: var(--surface); border: none; color: var(--text); font-size: 0.78rem; font-family: inherit; width: 100%; padding: 7px 6px; box-sizing: border-box; outline: none; cursor: pointer; }
 .cons-cell-select:focus { background: rgba(79,142,247,0.08); outline: 1px solid var(--accent); border-radius: 3px; }
+.cons-cell-select option { background: var(--surface2); color: var(--text); }
 .cons-cell-number { background: transparent; border: none; color: var(--text); font-size: 0.78rem; font-family: inherit; width: 100%; padding: 7px 10px; box-sizing: border-box; outline: none; text-align: center; }
 .cons-cell-number:focus { background: rgba(79,142,247,0.08); outline: 1px solid var(--accent); border-radius: 3px; }
 .cons-cell-notes { background: transparent; border: none; color: var(--muted); font-size: 0.75rem; font-family: inherit; width: 100%; padding: 7px 10px; box-sizing: border-box; outline: none; resize: none; height: 34px; font-style: italic; }
@@ -3107,11 +3108,12 @@ function renderConsultantTable() {
 }
 
 // Inline cell edit — updates the CONSULTANTS array and syncs to Sheets
+// Does NOT re-render the table (would clobber the active input)
 function consInlineEdit(id, field, value) {
   const c = CONSULTANTS.find(x => x.id === id);
   if (!c) return;
-  c[field] = value === '' ? null : value;
-  // If the detail panel is open for this consultant, refresh it
+  c[field] = (value === '' || value === null) ? null : value;
+  // Only refresh the detail panel if it's open — don't re-render the table
   if (consState.selectedId === id) renderConsultantPanel(id);
   // Sync to Sheets
   if (typeof debouncedWrite === 'function' && typeof _gsiAccessToken !== 'undefined' && _gsiAccessToken) {
@@ -3569,15 +3571,17 @@ function updateAuthUI(signedIn) {
     btn.classList.add('signed-in');
     ind.classList.remove('hidden');
     setSyncState('synced');
-    // Show one-time seed button if it doesn't exist yet
-    if (!document.getElementById('seed-btn')) {
-      const seedBtn = document.createElement('button');
-      seedBtn.id = 'seed-btn';
-      seedBtn.textContent = '⬆ Seed Sheet';
-      seedBtn.title = 'Push all local data to Google Sheets (one-time setup)';
-      seedBtn.style.cssText = 'background:var(--accent);border:none;color:#fff;padding:5px 12px;border-radius:6px;cursor:pointer;font-size:0.75rem;font-weight:600;margin-left:8px;';
-      seedBtn.onclick = seedSheetData;
-      document.querySelector('.header-controls').appendChild(seedBtn);
+    // Show refresh button if it doesn't exist yet
+    if (!document.getElementById('refresh-btn')) {
+      const refreshBtn = document.createElement('button');
+      refreshBtn.id = 'refresh-btn';
+      refreshBtn.textContent = '↻ Refresh';
+      refreshBtn.title = 'Pull latest data from Google Sheets';
+      refreshBtn.style.cssText = 'background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:5px 12px;border-radius:6px;cursor:pointer;font-size:0.75rem;font-weight:600;margin-left:8px;';
+      refreshBtn.onmouseenter = () => refreshBtn.style.borderColor = 'var(--accent)';
+      refreshBtn.onmouseleave = () => refreshBtn.style.borderColor = 'var(--border)';
+      refreshBtn.onclick = refreshFromSheets;
+      document.querySelector('.header-controls').appendChild(refreshBtn);
     }
   } else {
     btn.innerHTML = '<span>Sign in with Google</span>';
@@ -3886,42 +3890,22 @@ async function syncDeleteConsultant(id) {
   }
 }
 
-// ─── SEED SHEET WITH ALL LOCAL DATA ─────────────────────────────────
-async function seedSheetData() {
+// ─── REFRESH FROM SHEETS ─────────────────────────────────────────────
+async function refreshFromSheets() {
   if (!_gsiAccessToken) return;
-  const btn = document.getElementById('seed-btn');
-  if (btn) { btn.textContent = 'Seeding…'; btn.disabled = true; }
-  setSyncState('syncing');
+  const btn = document.getElementById('refresh-btn');
+  if (btn) { btn.textContent = '↻ Refreshing…'; btn.disabled = true; }
   try {
-    // Check if Consultants sheet already has data beyond the header
-    const check = await sheetsGet('Consultants!A1:A2');
-    const rows = (check.values || []);
-    const hasData = rows.length > 1 && rows[1][0] && !rows[1][0].startsWith('_deleted_');
-    if (hasData) {
-      showSyncToast('Sheet already has data — skipping seed to avoid duplicates.');
-      if (btn) { btn.textContent = '✓ Already seeded'; }
-      setSyncState('synced');
-      return;
-    }
-
-    // Write all consultants (skip header row — already there)
-    const consRows = CONSULTANTS.map(c => consultantToRow(c));
-    await sheetsAppend('Consultants', consRows);
-
-    // Write all teachers
-    const teacherRows = TEACHERS.map(t => teacherToRow(t));
-    await sheetsAppend('Teachers', teacherRows);
-
-    setSyncState('synced');
-    showSyncToast('✓ Sheet seeded with ' + CONSULTANTS.length + ' consultants and ' + TEACHERS.length + ' teachers.');
-    if (btn) { btn.textContent = '✓ Seeded!'; btn.style.background = 'var(--green)'; }
-    // Hide button after 3 seconds
-    setTimeout(() => { if (btn) btn.remove(); }, 3000);
+    await loadSheetsData();
+    // Re-render whichever tab is active
+    const activeTab = document.querySelector('.top-tab.active')?.id;
+    if (activeTab === 'tab-roster') { renderRosterTable(); applyColVisibility(); }
+    if (activeTab === 'tab-consultant') { renderConsultantTable(); applyConsColVisibility(); }
+    showSyncToast('✓ Data refreshed from Google Sheets');
   } catch(err) {
-    console.error('seedSheetData error:', err);
-    setSyncState('error');
-    showSyncToast('Seed failed: ' + err.message);
-    if (btn) { btn.textContent = '⚠ Seed failed — retry'; btn.disabled = false; }
+    showSyncToast('Refresh failed: ' + err.message);
+  } finally {
+    if (btn) { btn.textContent = '↻ Refresh'; btn.disabled = false; }
   }
 }
 
