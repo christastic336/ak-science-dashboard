@@ -3035,8 +3035,15 @@ function copyRosterEmails() {
 .prog-card { position: absolute; background: var(--surface2); border: 1px solid var(--accent); border-radius: 7px; padding: 6px 10px; cursor: grab; user-select: none; min-width: 90px; box-shadow: 0 2px 6px rgba(0,0,0,0.3); z-index: 2; }
 .prog-card:active { cursor: grabbing; }
 .prog-card.dragging { opacity: 0.85; z-index: 50; box-shadow: 0 6px 18px rgba(0,0,0,0.5); }
+.prog-card .pc-head { display: flex; align-items: center; gap: 8px; justify-content: space-between; }
 .prog-card .pc-name { font-size: 0.82rem; font-weight: 600; color: var(--text); white-space: nowrap; }
 .prog-card .pc-subj { font-size: 0.68rem; color: var(--accent); margin-top: 1px; }
+.prog-card .pc-actions { display: flex; gap: 2px; flex-shrink: 0; opacity: 0; transition: opacity 0.12s; }
+.prog-card:hover .pc-actions { opacity: 1; }
+.prog-card .pc-btn { background: transparent; border: none; color: var(--muted); cursor: pointer; font-size: 0.8rem; line-height: 1; padding: 1px 3px; border-radius: 3px; }
+.prog-card .pc-btn:hover { background: var(--border); color: var(--text); }
+.prog-card .pc-del:hover { background: rgba(248,113,113,0.2); color: var(--red); }
+.prog-card-dup { border-style: dashed; }
 .prog-tray { flex-shrink: 0; border-top: 1px solid var(--border); padding: 10px 20px; max-height: 150px; overflow-y: auto; }
 .prog-tray-title { font-size: 0.72rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px; }
 .prog-tray-cards { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -3805,9 +3812,53 @@ function progConsultants() {
   return CONSULTANTS.filter(c => c.programming === true);
 }
 
-function progCardHTML(c) {
+// A card id may be a plain consultant id ("c30") or a duplicate ("c30#dup-<n>").
+// Resolve back to the underlying consultant either way.
+function progBaseId(cardId) {
+  return String(cardId).split('#')[0];
+}
+function progIsDup(cardId) {
+  return String(cardId).includes('#dup-');
+}
+function progConsultantFor(cardId) {
+  return CONSULTANTS.find(c => c.id === progBaseId(cardId));
+}
+
+function progCardHTML(c, isDup) {
   const subj = [c.subj1, c.subj2].filter(Boolean).join(' · ');
-  return `<div class="pc-name">${(c.firstName||'')} ${(c.lastName||'')}</div>${subj ? `<div class="pc-subj">${subj}</div>` : ''}`;
+  const dupBtn = `<button class="pc-btn pc-dup" title="Duplicate this card" onclick="event.stopPropagation();duplicateProgCard(this.closest('.prog-card').dataset.id)">⧉</button>`;
+  const delBtn = `<button class="pc-btn pc-del" title="Remove this duplicate" onclick="event.stopPropagation();removeProgDup(this.closest('.prog-card').dataset.id)">✕</button>`;
+  return `<div class="pc-head">`
+    + `<div class="pc-name">${(c.firstName||'')} ${(c.lastName||'')}</div>`
+    + `<div class="pc-actions">${dupBtn}${isDup ? delBtn : ''}</div>`
+    + `</div>`
+    + (subj ? `<div class="pc-subj">${subj}</div>` : '');
+}
+
+// Create an independent duplicate of a card on the CURRENT board, offset slightly
+// from the source so it's visible. Saves its own position.
+function duplicateProgCard(srcCardId) {
+  const base = progBaseId(srcCardId);
+  const pos = _progPositions[_progCurrentBoard] || (_progPositions[_progCurrentBoard] = {});
+  // Find the next free dup index for this base on this board
+  let n = 1;
+  while (pos[`${base}#dup-${n}`]) n++;
+  const newId = `${base}#dup-${n}`;
+  // Place near the source card (or center if source unplaced)
+  const src = pos[srcCardId] || pos[base] || { x: 0.45, y: 0.45 };
+  const nx = Math.min(0.92, src.x + 0.03);
+  const ny = Math.min(0.92, src.y + 0.04);
+  pos[newId] = { x: nx, y: ny };
+  syncProgrammingPosition(_progCurrentBoard, newId, nx, ny);
+  renderProgrammingBoard();
+}
+
+// Remove a duplicate entirely (clears its saved position). Only duplicates.
+function removeProgDup(cardId) {
+  if (!progIsDup(cardId)) return;
+  delete (_progPositions[_progCurrentBoard] || {})[cardId];
+  syncProgrammingPosition(_progCurrentBoard, cardId, null, null);
+  renderProgrammingBoard();
 }
 
 function renderProgrammingBoard() {
@@ -3839,32 +3890,51 @@ function renderProgrammingBoard() {
     return;
   }
 
-  let unplaced = 0;
-  people.forEach(c => {
+  const mkCard = (cardId, c, isDup) => {
     const card = document.createElement('div');
-    card.className = 'prog-card';
-    card.dataset.id = c.id;
-    card.innerHTML = progCardHTML(c);
+    card.className = 'prog-card' + (isDup ? ' prog-card-dup' : '');
+    card.dataset.id = cardId;
+    card.innerHTML = progCardHTML(c, isDup);
+    return card;
+  };
+
+  let unplaced = 0;
+  // Originals (one per checked consultant)
+  people.forEach(c => {
+    const card = mkCard(c.id, c, false);
     const p = pos[c.id];
     if (p) {
-      // Placed on board
       card.style.left = (p.x * 100) + '%';
       card.style.top = (p.y * 100) + '%';
       board.appendChild(card);
     } else {
-      // In tray
       tray.appendChild(card);
       unplaced++;
     }
     attachProgDrag(card, c.id);
   });
-  if (unplaced === 0) {
-    tray.innerHTML = '<span class="prog-empty">All cards placed on the board.</span>';
+
+  // Duplicates (only exist as saved positions; always board-placed)
+  Object.keys(pos).filter(progIsDup).forEach(dupId => {
+    const c = progConsultantFor(dupId);
+    if (!c) return; // base consultant gone or unchecked — skip orphan
+    const p = pos[dupId];
+    const card = mkCard(dupId, c, true);
+    card.style.left = (p.x * 100) + '%';
+    card.style.top = (p.y * 100) + '%';
+    board.appendChild(card);
+    attachProgDrag(card, dupId);
+  });
+
+  if (unplaced === 0 && people.length > 0) {
+    if (!tray.children.length) tray.innerHTML = '<span class="prog-empty">All cards placed on the board.</span>';
   }
 }
 
 function attachProgDrag(card, id) {
   card.addEventListener('pointerdown', e => {
+    // Ignore drags that start on the duplicate/delete buttons
+    if (e.target.closest('.pc-btn')) return;
     e.preventDefault();
     const board = document.getElementById('prog-board');
     const brect = board.getBoundingClientRect();
