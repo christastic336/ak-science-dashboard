@@ -589,11 +589,11 @@ select:focus { outline: none; border-color: var(--accent); }
 <div class="sync-toast" id="sync-toast"></div>
 
 <div class="top-nav">
-  <button class="top-tab active" id="tab-roster" onclick="switchView('roster')">👩‍🏫 Teacher Roster</button>
+  <button class="top-tab active" id="tab-roster" onclick="switchView('roster')">👩‍🏫 Teachers</button>
   <button class="top-tab" id="tab-consultant" onclick="switchView('consultant')">🔬 Consultants</button>
+  <button class="top-tab" id="tab-coveragemap" onclick="switchView('coveragemap')">📍 Coverage Map</button>
   <button class="top-tab" id="tab-dashboard" onclick="switchView('dashboard')">📊 School Dashboard</button>
   <button class="top-tab" id="tab-heatmap" onclick="switchView('heatmap')">🗺️ County Heatmap</button>
-  <button class="top-tab" id="tab-coveragemap" onclick="switchView('coveragemap')">📍 Coverage Map</button>
 </div>
 <div id="dashboard-view" class="app">
   <!-- ─── SIDEBAR ─── -->
@@ -1876,6 +1876,7 @@ window.addEventListener('DOMContentLoaded', init);
     <div class="hm-control" style="flex:1">
       <h3>Export</h3>
       <button class="btn" onclick="exportRosterCSV()" style="width:100%;text-align:center;color:var(--accent)">⬇ Export Filtered CSV</button>
+      <button class="btn" onclick="copyRosterEmails()" style="width:100%;text-align:center;color:var(--accent);margin-top:8px">✉ Copy Emails (Outlook)</button>
     </div>
   </aside>
 
@@ -2775,6 +2776,40 @@ function exportRosterCSV() {
   a.click();
 }
 
+// Copy filtered email addresses to clipboard in Outlook-pastable format (semicolon-separated)
+function copyEmailList(emails, label) {
+  const clean = emails
+    .map(e => (e || '').trim())
+    .filter(e => e && e.includes('@'));
+  const unique = [...new Set(clean.map(e => e.toLowerCase()))]
+    .map(lc => clean.find(e => e.toLowerCase() === lc));
+  if (unique.length === 0) {
+    alert('No email addresses found for the current filter.');
+    return;
+  }
+  const text = unique.join('; ');
+  const done = () => alert(unique.length + ' ' + label + ' email address' + (unique.length === 1 ? '' : 'es') + ' copied.\nPaste into the To/Cc/Bcc line in Outlook.');
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(done, () => fallbackCopy(text, done));
+  } else {
+    fallbackCopy(text, done);
+  }
+}
+function fallbackCopy(text, done) {
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.position = 'fixed';
+  ta.style.opacity = '0';
+  document.body.appendChild(ta);
+  ta.select();
+  try { document.execCommand('copy'); done(); }
+  catch (e) { prompt('Copy these addresses:', text); }
+  document.body.removeChild(ta);
+}
+function copyRosterEmails() {
+  copyEmailList(getFilteredTeachers().map(t => t.teacherEmail), 'teacher');
+}
+
 </script>
 
 <!-- ─── CONSULTANT VIEW ─── -->
@@ -2812,6 +2847,7 @@ function exportRosterCSV() {
     <div class="hm-control" style="flex:1">
       <h3>Export</h3>
       <button class="btn" onclick="exportConsultantCSV()" style="width:100%;text-align:center;color:var(--accent)">⬇ Export Filtered CSV</button>
+      <button class="btn" onclick="copyConsultantEmails()" style="width:100%;text-align:center;color:var(--accent);margin-top:8px">✉ Copy Emails (Outlook)</button>
     </div>
   </aside>
 
@@ -3548,6 +3584,9 @@ function exportConsultantCSV() {
   a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
   a.download = 'AK_Consultants_2025-26.csv';
   a.click();
+}
+function copyConsultantEmails() {
+  copyEmailList(getFilteredConsultants().map(c => c.email), 'consultant');
 }
 </script>
 
