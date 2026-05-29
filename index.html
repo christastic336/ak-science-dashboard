@@ -431,6 +431,8 @@ select:focus { outline: none; border-color: var(--accent); }
 .cons-name-cell input:nth-of-type(1) { font-weight: 700; color: var(--accent); }
 .cons-info-btn { flex:0 0 auto; background: var(--surface2); border: 1px solid var(--border); color: var(--accent); width: 20px; height: 20px; border-radius: 4px; cursor: pointer; font-size: 0.7rem; line-height: 1; display: flex; align-items: center; justify-content: center; padding: 0; }
 .cons-info-btn:hover { border-color: var(--accent); background: var(--accent); color: #fff; }
+.col-resizer { position: absolute; top: 0; right: 0; width: 6px; height: 100%; cursor: col-resize; z-index: 5; }
+.col-resizer:hover { background: var(--accent); opacity: 0.5; }
 .cons-name-cell input:focus { background: rgba(79,142,247,0.08); outline: 1px solid var(--accent); }
 
 /* ─── CONSULTANT MODAL ─── */
@@ -2894,9 +2896,9 @@ function copyRosterEmails() {
       <div class="cons-table-wrap" id="cons-table-wrap">
         <table class="cons-table" id="cons-table">
           <colgroup>
-            <col style="width:150px"><!-- Name -->
-            <col style="width:220px"><!-- Address -->
-            <col style="width:200px"><!-- Email -->
+            <col style="width:210px"><!-- Name -->
+            <col style="width:280px"><!-- Address -->
+            <col style="width:260px"><!-- Email -->
             <col style="width:72px"><!-- Contract -->
             <col style="width:95px"><!-- Subj 1 -->
             <col style="width:95px"><!-- Subj 2 -->
@@ -3196,13 +3198,17 @@ function renderConsultantTable() {
     </tr>`;
   }).join('');
 
-  // Apply frozen column left offsets
+  applyConsFrozenOffsets();
+  initConsColumnResize();
+}
+
+// Recompute sticky-left offsets for frozen columns (call after any width change)
+function applyConsFrozenOffsets() {
   const table = document.getElementById('cons-table');
   if (!table) return;
-  const frozenCols = table.querySelectorAll('td.frozen, th.frozen');
+  const tbody = document.getElementById('cons-tbody');
   let leftMap = {};
-  // Calculate from first row
-  const firstRow = tbody.querySelector('tr');
+  const firstRow = tbody && tbody.querySelector('tr');
   if (firstRow) {
     let left = 0;
     firstRow.querySelectorAll('td.frozen').forEach((td, i) => {
@@ -3213,6 +3219,67 @@ function renderConsultantTable() {
   table.querySelectorAll('td.frozen, th.frozen').forEach(cell => {
     const idx = [...cell.parentElement.children].filter(c2 => c2.classList.contains('frozen')).indexOf(cell);
     if (leftMap[idx] !== undefined) cell.style.left = leftMap[idx] + 'px';
+  });
+}
+
+const CONS_COLW_KEY = 'akConsColWidths';
+
+function saveConsColWidths() {
+  const table = document.getElementById('cons-table');
+  if (!table) return;
+  const widths = [...table.querySelectorAll('colgroup col')].map(c => c.style.width || '');
+  try { localStorage.setItem(CONS_COLW_KEY, JSON.stringify(widths)); } catch(e) {}
+}
+
+function restoreConsColWidths() {
+  const table = document.getElementById('cons-table');
+  if (!table) return;
+  let widths;
+  try { widths = JSON.parse(localStorage.getItem(CONS_COLW_KEY) || 'null'); } catch(e) { widths = null; }
+  if (!Array.isArray(widths)) return;
+  const cols = table.querySelectorAll('colgroup col');
+  widths.forEach((w, i) => { if (w && cols[i]) cols[i].style.width = w; });
+  applyConsFrozenOffsets();
+}
+
+// Attach drag-to-resize handles to consultant table headers (idempotent)
+function initConsColumnResize() {
+  const table = document.getElementById('cons-table');
+  if (!table) return;
+  restoreConsColWidths();
+  const cols = table.querySelectorAll('colgroup col');
+  const headerRow = table.querySelectorAll('thead tr')[1];
+  if (!headerRow) return;
+  headerRow.querySelectorAll('th').forEach((th, i) => {
+    if (th.querySelector('.col-resizer') || !cols[i]) return;
+    th.style.position = th.style.position || 'relative';
+    const grip = document.createElement('span');
+    grip.className = 'col-resizer';
+    grip.addEventListener('click', e => { e.stopPropagation(); });
+    grip.addEventListener('mousedown', e => {
+      e.preventDefault();
+      e.stopPropagation();
+      const startX = e.pageX;
+      const col = cols[i];
+      const startW = parseInt(col.style.width, 10) || th.offsetWidth;
+      document.body.style.cursor = 'col-resize';
+      document.body.style.userSelect = 'none';
+      const onMove = ev => {
+        const w = Math.max(48, startW + (ev.pageX - startX));
+        col.style.width = w + 'px';
+        applyConsFrozenOffsets();
+      };
+      const onUp = () => {
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onUp);
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+        saveConsColWidths();
+      };
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onUp);
+    });
+    th.appendChild(grip);
   });
 }
 
