@@ -3379,8 +3379,8 @@ function consInlineEdit(id, field, value) {
   const c = CONSULTANTS.find(x => x.id === id);
   if (!c) return;
   c[field] = (value === '' || value === null) ? null : value;
-  // Persist locally so the edit survives refresh even when offline
-  saveConsEdit(id);
+  // Persist locally so the edit survives refresh even when offline (only this field)
+  saveConsEdit(id, [field]);
   // Only refresh the detail panel if it's open — don't re-render the table
   if (consState.selectedId === id) renderConsultantPanel(id);
   // Sync to Sheets
@@ -3523,13 +3523,19 @@ const CONS_EDITS_KEY = 'akConsultantEdits';
 function getConsEdits() {
   try { return JSON.parse(localStorage.getItem(CONS_EDITS_KEY)) || {}; } catch(e) { return {}; }
 }
-function saveConsEdit(id) {
+// Save only the CHANGED field(s) into the overlay, not the whole record. This
+// way re-applying after a Sheet load restores local edits without reverting
+// fresh Sheet values for fields the user didn't touch.
+// `fields` is an array of field names that changed (defaults to all editable).
+function saveConsEdit(id, fields) {
   if (id.startsWith('ca')) return; // added consultants persist via persistAddedConsultants
   const c = CONSULTANTS.find(x => x.id === id);
   if (!c) return;
+  const keys = fields || ['programming','masterSeries','msMod','mentorBlocks','launchDayBlocks','ffssBlocks','stipend','travelAllowance','mockExamLeader','contract','subj1','subj2','email','address1','address2','firstName','lastName'];
   try {
     const edits = getConsEdits();
-    edits[id] = { ...c }; // store the full current record for this consultant
+    if (!edits[id]) edits[id] = {};
+    keys.forEach(k => { edits[id][k] = c[k] ?? null; });
     localStorage.setItem(CONS_EDITS_KEY, JSON.stringify(edits));
   } catch(e) {}
 }
@@ -4315,7 +4321,9 @@ async function sheetsAppend(sheetName, values) {
 function sheetToObjects(data) {
   const rows = data.values || [];
   if (rows.length < 2) return [];
-  const headers = rows[0];
+  // Normalize header text to the canonical field name so a header like
+  // "Programming" (capitalized / spaced) still maps to the `programming` field.
+  const headers = rows[0].map(normalizeSheetHeader);
   return rows.slice(1)
     .filter(row => row.some(cell => cell !== '' && cell != null)) // skip blank rows
     .map(row => {
@@ -4324,6 +4332,24 @@ function sheetToObjects(data) {
       return obj;
     })
     .filter(obj => obj.id && !String(obj.id).startsWith('_deleted_')); // skip deleted/empty id rows
+}
+
+// Map a sheet header cell to the canonical field key. Matches against all known
+// consultant/teacher field names case-insensitively (ignoring spaces), so human
+// headers like "Programming" or "Master Series" resolve to programming/masterSeries.
+// Computed lazily so it doesn't depend on declaration order of CONSULTANT_COLS.
+function _allFieldKeys() {
+  const cons = (typeof CONSULTANT_COLS !== 'undefined') ? CONSULTANT_COLS : [];
+  return cons.concat(['notes','contractOverride','eventKey','eventValue','board','consultantId','x','y','label','sub']);
+}
+function normalizeSheetHeader(h) {
+  if (h == null) return h;
+  const raw = String(h).trim();
+  const keys = _allFieldKeys();
+  if (keys.includes(raw)) return raw; // exact match wins
+  const squashed = raw.toLowerCase().replace(/[^a-z0-9]/g, '');
+  const hit = keys.find(k => k.toLowerCase() === squashed);
+  return hit || raw;
 }
 
 // ─── COLUMN MAPS ────────────────────────────────────────────────────
@@ -4391,6 +4417,19 @@ async function loadSheetsData() {
         r.programming = (r.programming === 'true' || r.programming === 'Y' || r.programming === true) ? true : null;
         CONSULTANTS.unshift(r);
       });
+      // The Sheet replaced the consultant objects. Re-apply local edits so
+      // local-only fields (e.g. Programming, set before the Sheet had that
+      // column) are not lost, then push them up so the Sheet catches up.
+      if (typeof applyConsEdits === 'function') {
+        const edits = (typeof getConsEdits === 'function') ? getConsEdits() : {};
+        applyConsEdits();
+        // Push each locally-edited consultant back to the Sheet so it persists there too
+        Object.keys(edits).forEach(id => {
+          if (typeof debouncedWrite === 'function') {
+            debouncedWrite('consRow_' + id, () => syncConsultantRow(id), 1200);
+          }
+        });
+      }
     }
 
     // ── ConsultantNotes → push into localStorage-compatible layer ──
