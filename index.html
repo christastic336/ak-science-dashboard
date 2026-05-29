@@ -351,19 +351,20 @@ select:focus { outline: none; border-color: var(--accent); }
 .cons-search::placeholder { color: var(--muted); }
 .cons-stats { font-size: 0.75rem; color: var(--muted); white-space: nowrap; }
 .cons-table-wrap { flex: 1; overflow: auto; min-width: 0; }
-.cons-table { border-collapse: separate; border-spacing: 0; font-size: 0.78rem; white-space: nowrap; width: 100%; table-layout: fixed; }
-.cons-table thead th { position: sticky; top: 0; z-index: 3; background: var(--surface2); color: var(--muted); font-weight: 600; font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.06em; padding: 8px 10px; border-bottom: 2px solid var(--border); border-right: 1px solid var(--border); cursor: pointer; user-select: none; white-space: nowrap; }
+.cons-table { border-collapse: separate; border-spacing: 0; font-size: 0.78rem; table-layout: fixed; min-width: 1200px; }
+.cons-table thead th { position: sticky; top: 0; z-index: 3; background: var(--surface2); color: var(--muted); font-weight: 600; font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.06em; padding: 8px 10px; border-bottom: 2px solid var(--border); border-right: 1px solid var(--border); cursor: pointer; user-select: none; white-space: nowrap; overflow: hidden; }
 .cons-table thead th:hover { color: var(--text); }
 .cons-table thead th.sorted { color: var(--accent); }
 .cons-table th.frozen, .cons-table td.frozen { position: sticky; z-index: 2; background: var(--surface); }
 .cons-table thead th.frozen { z-index: 4; background: var(--surface2); }
 .cons-table tr:hover td.frozen { background: #22263a; }
 .cons-table tr.selected-row td.frozen { background: rgba(79,142,247,0.15); }
-.cons-table td { padding: 7px 10px; border-bottom: 1px solid var(--border); border-right: 1px solid rgba(46,52,80,0.5); color: var(--text); vertical-align: middle; }
-.cons-table tr:hover td { background: var(--surface2); cursor: pointer; }
+.cons-table td { padding: 7px 10px; border-bottom: 1px solid var(--border); border-right: 1px solid rgba(46,52,80,0.5); color: var(--text); vertical-align: middle; overflow: hidden; max-width: 0; }
+.cons-table tr:hover td { background: var(--surface2); }
 .cons-table tr.selected-row td { background: rgba(79,142,247,0.08); }
 .cons-table td.frozen-last, .cons-table th.frozen-last { border-right: 2px solid var(--accent) !important; }
 .cons-table thead tr.group-row th { font-size: 0.65rem; text-align: center; padding: 4px 6px; border-bottom: 1px solid var(--border); letter-spacing: 0.1em; }
+.cons-table td.editable { padding: 0 !important; overflow: hidden; }
 
 /* Consultant detail panel */
 .cons-panel { width: 360px; min-width: 360px; background: var(--surface); border-left: 1px solid var(--border); overflow-y: auto; display: flex; flex-direction: column; }
@@ -407,19 +408,18 @@ select:focus { outline: none; border-color: var(--accent); }
 .cons-name-link:hover { text-decoration: underline; }
 
 /* Inline cell editing */
-.cons-table td.editable { padding: 0 !important; }
-.cons-cell-input { background: transparent; border: none; color: var(--text); font-size: 0.75rem; font-family: inherit; width: 100%; padding: 4px 8px; box-sizing: border-box; outline: none; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.cons-cell-input:focus { background: rgba(79,142,247,0.08); outline: 1px solid var(--accent); border-radius: 3px; overflow: visible; }
+.cons-cell-input { background: transparent; border: none; color: var(--text); font-size: 0.75rem; font-family: inherit; width: 100%; padding: 5px 8px; box-sizing: border-box; outline: none; display: block; }
+.cons-cell-input:focus { background: rgba(79,142,247,0.08); outline: 1px solid var(--accent); border-radius: 3px; }
 .cons-cell-input::placeholder { color: var(--muted); font-style: italic; }
-.cons-cell-select { background: var(--surface); border: none; color: var(--text); font-size: 0.78rem; font-family: inherit; width: 100%; padding: 7px 6px; box-sizing: border-box; outline: none; cursor: pointer; }
+.cons-cell-select { background: var(--surface); border: none; color: var(--text); font-size: 0.75rem; font-family: inherit; width: 100%; padding: 8px 4px; box-sizing: border-box; outline: none; cursor: pointer; display: block; }
 .cons-cell-select:focus { background: rgba(79,142,247,0.08); outline: 1px solid var(--accent); border-radius: 3px; }
 .cons-cell-select option { background: var(--surface2); color: var(--text); }
-.cons-cell-number { background: transparent; border: none; color: var(--text); font-size: 0.78rem; font-family: inherit; width: 100%; padding: 7px 10px; box-sizing: border-box; outline: none; text-align: center; }
+.cons-cell-number { background: transparent; border: none; color: var(--text); font-size: 0.75rem; font-family: inherit; width: 100%; padding: 8px 6px; box-sizing: border-box; outline: none; text-align: center; display: block; }
 .cons-cell-number:focus { background: rgba(79,142,247,0.08); outline: 1px solid var(--accent); border-radius: 3px; }
-.cons-cell-notes { background: transparent; border: none; color: var(--muted); font-size: 0.75rem; font-family: inherit; width: 100%; padding: 7px 10px; box-sizing: border-box; outline: none; resize: none; height: 34px; font-style: italic; }
-.cons-cell-notes:focus { background: rgba(79,142,247,0.08); outline: 1px solid var(--accent); border-radius: 3px; color: var(--text); font-style: normal; height: 60px; }
-.cons-name-cell { display: flex; flex-direction: column; gap: 0; padding: 3px 4px; }
-.cons-name-cell input { background: transparent; border: none; color: var(--text); font-size: 0.75rem; font-family: inherit; width: 100%; padding: 2px 4px; outline: none; border-radius: 3px; box-sizing: border-box; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cons-cell-notes { background: transparent; border: none; color: var(--muted); font-size: 0.75rem; font-family: inherit; width: 100%; padding: 7px 8px; box-sizing: border-box; outline: none; resize: none; height: 36px; font-style: italic; display: block; }
+.cons-cell-notes:focus { background: rgba(79,142,247,0.08); outline: 1px solid var(--accent); border-radius: 3px; color: var(--text); font-style: normal; }
+.cons-name-cell { display: flex; flex-direction: column; gap: 0; padding: 2px 4px; overflow: hidden; }
+.cons-name-cell input { background: transparent; border: none; color: var(--text); font-size: 0.75rem; font-family: inherit; width: 100%; padding: 3px 4px; outline: none; border-radius: 3px; box-sizing: border-box; }
 .cons-name-cell input:first-child { font-weight: 700; color: var(--accent); }
 .cons-name-cell input:focus { background: rgba(79,142,247,0.08); outline: 1px solid var(--accent); }
 
@@ -2812,19 +2812,19 @@ function exportRosterCSV() {
       <div class="cons-table-wrap" id="cons-table-wrap">
         <table class="cons-table" id="cons-table">
           <colgroup>
-            <col style="min-width:140px;width:140px"><!-- Name -->
-            <col style="min-width:200px;width:200px"><!-- Address -->
-            <col style="min-width:70px;width:70px"><!-- Contract -->
-            <col style="min-width:90px;width:90px"><!-- Subj 1 -->
-            <col style="min-width:90px;width:90px"><!-- Subj 2 -->
-            <col style="min-width:80px;width:80px"><!-- Launch Day -->
-            <col style="min-width:80px;width:80px"><!-- FF/SS -->
-            <col style="min-width:90px;width:90px"><!-- Master Series -->
-            <col style="min-width:85px;width:85px"><!-- Mentor -->
-            <col style="min-width:75px;width:75px"><!-- Mock -->
-            <col style="min-width:80px;width:80px"><!-- Stipend -->
-            <col style="min-width:90px;width:90px"><!-- Travel -->
-            <col style="min-width:160px;width:160px"><!-- Notes -->
+            <col style="width:150px"><!-- Name -->
+            <col style="width:220px"><!-- Address -->
+            <col style="width:72px"><!-- Contract -->
+            <col style="width:95px"><!-- Subj 1 -->
+            <col style="width:95px"><!-- Subj 2 -->
+            <col style="width:82px"><!-- Launch Day -->
+            <col style="width:82px"><!-- FF/SS -->
+            <col style="width:95px"><!-- Master Series -->
+            <col style="width:82px"><!-- Mentor -->
+            <col style="width:72px"><!-- Mock -->
+            <col style="width:82px"><!-- Stipend -->
+            <col style="width:92px"><!-- Travel -->
+            <col style="width:180px"><!-- Notes -->
           </colgroup>
           <thead>
             <tr class="group-row">
