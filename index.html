@@ -3165,12 +3165,10 @@ function renderConsultantTable() {
 
     return `<tr class="${isSelected ? 'selected-row' : ''}">
       <td class="frozen frozen-last editable" onclick="selectConsultant('${c.id}')">
-        <div class="cons-name-cell">
-          <input value="${(c.lastName||'').replace(/"/g,'&quot;')}" placeholder="Last name" onchange="consInlineEdit('${c.id}','lastName',this.value)" onclick="event.stopPropagation()" title="Last name">
-          <div style="display:flex;align-items:center;gap:4px">
-            <input style="flex:1;min-width:0" value="${(c.firstName||'').replace(/"/g,'&quot;')}" placeholder="First name" onchange="consInlineEdit('${c.id}','firstName',this.value)" onclick="event.stopPropagation()" title="First name">
-            <button class="cons-info-btn" onclick="event.stopPropagation();selectConsultant('${c.id}')" title="View full details">ℹ</button>
-          </div>
+        <div class="cons-name-cell" style="flex-direction:row;align-items:center;gap:4px">
+          <input style="flex:1.2;min-width:0" value="${(c.lastName||'').replace(/"/g,'&quot;')}" placeholder="Last" onchange="consInlineEdit('${c.id}','lastName',this.value)" onclick="event.stopPropagation()" title="Last name">
+          <input style="flex:1;min-width:0" value="${(c.firstName||'').replace(/"/g,'&quot;')}" placeholder="First" onchange="consInlineEdit('${c.id}','firstName',this.value)" onclick="event.stopPropagation()" title="First name">
+          <button class="cons-info-btn" onclick="event.stopPropagation();selectConsultant('${c.id}')" title="View full details">ℹ</button>
         </div>
       </td>
       <td class="editable">
