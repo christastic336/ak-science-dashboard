@@ -3255,7 +3255,14 @@ function initConsColumnResize() {
   if (!headerRow) return;
   headerRow.querySelectorAll('th').forEach((th, i) => {
     if (th.querySelector('.col-resizer') || !cols[i]) return;
-    th.style.position = th.style.position || 'relative';
+    // NOTE: do not force position:relative here — these th's are position:sticky
+    // (see .cons-table thead th), which is itself a containing block for the
+    // absolutely-positioned resizer grip. Overriding to relative breaks the
+    // sticky header. Only set relative if sticky somehow isn't applied.
+    const curPos = getComputedStyle(th).position;
+    if (curPos !== 'sticky' && curPos !== 'relative' && curPos !== 'absolute') {
+      th.style.position = 'relative';
+    }
     const grip = document.createElement('span');
     grip.className = 'col-resizer';
     grip.addEventListener('click', e => { e.stopPropagation(); });
