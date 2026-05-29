@@ -193,6 +193,9 @@ select:focus { outline: none; border-color: var(--accent); }
 .status-chip.notreturning { background: rgba(248,113,113,0.12); color: var(--red); }
 
 .prog-chip { display: inline-block; padding: 2px 7px; border-radius: 10px; font-size: 0.7rem; font-weight: 500; background: var(--surface2); border: 1px solid var(--border); color: var(--muted); }
+.guk-row td { background: rgba(124,92,191,0.1) !important; }
+.guk-row:hover td { background: rgba(124,92,191,0.18) !important; }
+.guk-row td.frozen { background: rgba(124,92,191,0.1) !important; }
 
 .crp-year { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; font-size: 0.75rem; font-weight: 700; }
 .crp-year.y1 { background: rgba(79,142,247,0.2); color: var(--accent); }
@@ -2188,7 +2191,7 @@ function renderRosterTable() {
       </td>`;
     };
 
-    return `<tr class="${isSelected ? 'selected-row' : ''}">
+    return `<tr class="${isSelected ? 'selected-row' : ''}${t.program === 'GUK' ? ' guk-row' : ''}">
       <td class="frozen frozen-last"><span class="teacher-name-link" onclick="selectTeacher('${t.id}')">${t.lastName}, ${t.firstName}</span></td>
       <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis">${t.school}</td>
       <td style="font-size:0.72rem;color:var(--muted);max-width:180px;overflow:hidden;text-overflow:ellipsis">${data.schoolAddress || SCHOOL_ADDRESSES[t.school] || '<span style="color:var(--muted);font-style:italic">—</span>'}</td>
