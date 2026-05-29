@@ -3726,7 +3726,9 @@ function gsiSignIn() {
       await loadSheetsData();
     }
   });
-  client.requestAccessToken({ prompt: 'consent' });
+  // Empty prompt lets Google return a token silently when an active session
+  // already granted consent, instead of forcing the full dialog every time.
+  client.requestAccessToken({ prompt: '' });
 }
 
 function gsiSignOut() {
