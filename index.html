@@ -1298,7 +1298,8 @@ function switchView(view) {
     applyConsColVisibility();
   }
   if (view === 'coveragemap') {
-    if (!coverageMapInited) initCoverageMap();
+    // Defer so the div is visible and has dimensions before we draw
+    setTimeout(() => { if (!coverageMapInited) initCoverageMap(); }, 50);
   }
 }
 // Default to roster tab on load
@@ -4162,33 +4163,35 @@ async function initCoverageMap() {
   coverageMapInited = true;
 
   const container = document.getElementById('cm-map-container');
-  const W = container.clientWidth || 900;
-  const H = container.clientHeight || 500;
+  const W = container.offsetWidth || 900;
+  const H = container.offsetHeight || 520;
+
+  // Clear any previous render
+  d3.select('#cm-svg').selectAll('*').remove();
 
   const svg = d3.select('#cm-svg')
-    .attr('viewBox', '0 0 ' + W + ' ' + H)
+    .attr('viewBox', `0 0 ${W} ${H}`)
     .attr('preserveAspectRatio', 'xMidYMid meet');
 
-  // Load TopoJSON (reuse cached geo if heatmap already loaded it)
+  // Show loading state
+  svg.append('text')
+    .attr('x', W / 2).attr('y', H / 2)
+    .attr('text-anchor', 'middle')
+    .attr('fill', 'var(--muted)')
+    .attr('font-size', '14px')
+    .attr('id', 'cm-loading-text')
+    .text('Loading map…');
+
+  // Always fetch TopoJSON fresh for the coverage map
   let kyGeo = null;
-  if (hmState.geoLoaded && hmState.geo) {
-    kyGeo = hmState.geo;
-  } else {
-    let topo = null;
-    const urls = [
-      'https://cdn.jsdelivr.net/npm/us-atlas@3/counties-10m.json',
-      'https://unpkg.com/us-atlas@3/counties-10m.json'
-    ];
-    for (const url of urls) {
-      try { topo = await fetch(url).then(function(r){ return r.json(); }); break; }
-      catch(e) { console.warn('Coverage map: TopoJSON fetch failed', url, e); }
-    }
-    if (!topo) {
-      container.innerHTML = '<p style="color:var(--muted);padding:40px">Map unavailable — could not load county geometry.</p>';
-      return;
-    }
+  try {
+    const topo = await fetch('https://cdn.jsdelivr.net/npm/us-atlas@3/counties-10m.json').then(r => r.json());
     const allCounties = topojson.feature(topo, topo.objects.counties);
-    kyGeo = { type: 'FeatureCollection', features: allCounties.features.filter(function(f){ return String(f.id).startsWith('21'); }) };
+    kyGeo = { type: 'FeatureCollection', features: allCounties.features.filter(f => String(f.id).startsWith('21')) };
+  } catch(e) {
+    console.error('Coverage map: TopoJSON fetch failed', e);
+    container.innerHTML = '<p style="color:var(--muted);padding:40px;text-align:center">Map unavailable — could not load county geometry.</p>';
+    return;
   }
 
   // Projection tuned for Kentucky
@@ -4200,6 +4203,9 @@ async function initCoverageMap() {
     .translate([W / 2, H / 2]);
 
   const path = d3.geoPath().projection(projection);
+
+  // Remove loading text
+  svg.select('#cm-loading-text').remove();
 
   // Draw county base layer
   svg.append('g').attr('class', 'cm-counties')
