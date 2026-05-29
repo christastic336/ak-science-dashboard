@@ -4366,7 +4366,13 @@ function teacherToRow(t) {
   return TEACHER_COLS.map(k => t[k] != null ? String(t[k]) : '');
 }
 function consultantToRow(c) {
-  return CONSULTANT_COLS.map(k => c[k] != null ? String(c[k]) : '');
+  return CONSULTANT_COLS.map(k => {
+    if (c[k] == null) return '';
+    // Write the programming flag as "Y" (text) rather than "true", so Google
+    // Sheets doesn't auto-convert it to a boolean and round-trip it as "TRUE".
+    if (k === 'programming') return c[k] ? 'Y' : '';
+    return String(c[k]);
+  });
 }
 
 // ─── LOAD DATA FROM SHEETS ──────────────────────────────────────────
@@ -4414,7 +4420,12 @@ async function loadSheetsData() {
           else r[k] = null;
         });
         // Programming is a boolean flag stored as 'true'/'Y' string in the sheet
-        r.programming = (r.programming === 'true' || r.programming === 'Y' || r.programming === true) ? true : null;
+        // Google Sheets coerces the string "true" into a boolean cell and returns
+        // it as "TRUE" on read — so match case-insensitively across variants.
+        {
+          const pv = String(r.programming == null ? '' : r.programming).trim().toLowerCase();
+          r.programming = (pv === 'true' || pv === 'y' || pv === 'yes' || pv === '1' || pv === 'checked') ? true : null;
+        }
         CONSULTANTS.unshift(r);
       });
       // The Sheet replaced the consultant objects. Re-apply local edits so
