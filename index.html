@@ -411,9 +411,14 @@ select:focus { outline: none; border-color: var(--accent); }
 .cons-cell-input { background: transparent; border: none; color: var(--text); font-size: 0.75rem; font-family: inherit; width: 100%; padding: 5px 8px; box-sizing: border-box; outline: none; display: block; }
 .cons-cell-input:focus { background: rgba(79,142,247,0.08); outline: 1px solid var(--accent); border-radius: 3px; }
 .cons-cell-input::placeholder { color: var(--muted); font-style: italic; }
-.cons-cell-select { background: var(--surface); border: none; color: var(--text); font-size: 0.75rem; font-family: inherit; width: 100%; padding: 8px 4px; box-sizing: border-box; outline: none; cursor: pointer; display: block; }
-.cons-cell-select:focus { background: rgba(79,142,247,0.08); outline: 1px solid var(--accent); border-radius: 3px; }
-.cons-cell-select option { background: var(--surface2); color: var(--text); }
+.cons-cell-select { background: var(--surface); border: none; color: var(--text); font-size: 0.75rem; font-family: inherit; width: 100%; padding: 8px 4px; box-sizing: border-box; outline: none; cursor: pointer; display: block; border-radius: 4px; font-weight: 600; }
+.cons-cell-select:focus { outline: 1px solid var(--accent); border-radius: 3px; }
+.cons-cell-select option { background: var(--surface2); color: var(--text); font-weight: 400; }
+.cons-cell-select.subj-bio   { background: rgba(52,211,153,0.15); color: #34d399; }
+.cons-cell-select.subj-chem  { background: rgba(251,191,36,0.15);  color: #fbbf24; }
+.cons-cell-select.subj-phys  { background: rgba(248,113,113,0.15); color: #f87171; }
+.cons-cell-select.subj-envsci{ background: rgba(79,142,247,0.15);  color: #4f8ef7; }
+.cons-cell-select.subj-none  { background: var(--surface); color: var(--muted); font-weight: 400; }
 .cons-cell-number { background: transparent; border: none; color: var(--text); font-size: 0.75rem; font-family: inherit; width: 100%; padding: 8px 6px; box-sizing: border-box; outline: none; text-align: center; display: block; }
 .cons-cell-number:focus { background: rgba(79,142,247,0.08); outline: 1px solid var(--accent); border-radius: 3px; }
 .cons-cell-notes { background: transparent; border: none; color: var(--muted); font-size: 0.75rem; font-family: inherit; width: 100%; padding: 7px 8px; box-sizing: border-box; outline: none; resize: none; height: 36px; font-style: italic; display: block; }
@@ -1856,34 +1861,37 @@ window.addEventListener('DOMContentLoaded', init);
         <div class="col-picker-dropdown" id="col-picker-dropdown">
           <div class="col-picker-group">Identity (always visible)</div>
           <div class="col-picker-item frozen-col"><input type="checkbox" checked disabled> Teacher</div>
-          <div class="col-picker-item frozen-col"><input type="checkbox" checked disabled> School</div>
-          <div class="col-picker-item frozen-col"><input type="checkbox" checked disabled> District</div>
-          <div class="col-picker-item frozen-col"><input type="checkbox" checked disabled> Course</div>
-          <div class="col-picker-item frozen-col"><input type="checkbox" checked disabled> CRP Year</div>
-          <div class="col-picker-item frozen-col"><input type="checkbox" checked disabled> Status</div>
+          <div class="col-picker-divider"></div>
+          <div class="col-picker-group">Info</div>
+          <div class="col-picker-item" onclick="colPickerToggle(1,this)"><input type="checkbox" checked> School</div>
+          <div class="col-picker-item" onclick="colPickerToggle(2,this)"><input type="checkbox" checked> School Address</div>
+          <div class="col-picker-item" onclick="colPickerToggle(3,this)"><input type="checkbox" checked> District</div>
+          <div class="col-picker-item" onclick="colPickerToggle(4,this)"><input type="checkbox" checked> Course</div>
+          <div class="col-picker-item" onclick="colPickerToggle(5,this)"><input type="checkbox" checked> CRP Year</div>
+          <div class="col-picker-item" onclick="colPickerToggle(6,this)"><input type="checkbox" checked> Status</div>
           <div class="col-picker-divider"></div>
           <div class="col-picker-group">📅 Events w/ Date</div>
-          <div class="col-picker-item" onclick="colPickerToggle(6,this)"><input type="checkbox" checked> Fall Site Visit</div>
-          <div class="col-picker-item" onclick="colPickerToggle(7,this)"><input type="checkbox" checked> Supp. Content</div>
-          <div class="col-picker-item" onclick="colPickerToggle(8,this)"><input type="checkbox" checked> Vertical Team 1</div>
-          <div class="col-picker-item" onclick="colPickerToggle(9,this)"><input type="checkbox" checked> Vertical Team 2</div>
-          <div class="col-picker-item" onclick="colPickerToggle(10,this)"><input type="checkbox" checked> Spring Site Visit</div>
+          <div class="col-picker-item" onclick="colPickerToggle(7,this)"><input type="checkbox" checked> Fall Site Visit</div>
+          <div class="col-picker-item" onclick="colPickerToggle(8,this)"><input type="checkbox" checked> Supp. Content</div>
+          <div class="col-picker-item" onclick="colPickerToggle(9,this)"><input type="checkbox" checked> Vertical Team 1</div>
+          <div class="col-picker-item" onclick="colPickerToggle(10,this)"><input type="checkbox" checked> Vertical Team 2</div>
+          <div class="col-picker-item" onclick="colPickerToggle(11,this)"><input type="checkbox" checked> Spring Site Visit</div>
           <div class="col-picker-divider"></div>
           <div class="col-picker-group">✓ Checkboxes</div>
-          <div class="col-picker-item" onclick="colPickerToggle(11,this)"><input type="checkbox" checked> Summer Training</div>
-          <div class="col-picker-item" onclick="colPickerToggle(12,this)"><input type="checkbox" checked> Launch Day</div>
-          <div class="col-picker-item" onclick="colPickerToggle(13,this)"><input type="checkbox" checked> Teacher Inventory</div>
-          <div class="col-picker-item" onclick="colPickerToggle(14,this)"><input type="checkbox" checked> Fall Forum</div>
-          <div class="col-picker-item" onclick="colPickerToggle(15,this)"><input type="checkbox" checked> MiniMock #1</div>
-          <div class="col-picker-item" onclick="colPickerToggle(16,this)"><input type="checkbox" checked> MiniMock #2</div>
-          <div class="col-picker-item" onclick="colPickerToggle(17,this)"><input type="checkbox" checked> Reg. Mock</div>
-          <div class="col-picker-item" onclick="colPickerToggle(18,this)"><input type="checkbox" checked> Mock Exam</div>
-          <div class="col-picker-item" onclick="colPickerToggle(19,this)"><input type="checkbox" checked> Supp. Requested</div>
-          <div class="col-picker-item" onclick="colPickerToggle(20,this)"><input type="checkbox" checked> Exam Prep</div>
+          <div class="col-picker-item" onclick="colPickerToggle(12,this)"><input type="checkbox" checked> Summer Training</div>
+          <div class="col-picker-item" onclick="colPickerToggle(13,this)"><input type="checkbox" checked> Launch Day</div>
+          <div class="col-picker-item" onclick="colPickerToggle(14,this)"><input type="checkbox" checked> Teacher Inventory</div>
+          <div class="col-picker-item" onclick="colPickerToggle(15,this)"><input type="checkbox" checked> Fall Forum</div>
+          <div class="col-picker-item" onclick="colPickerToggle(16,this)"><input type="checkbox" checked> MiniMock #1</div>
+          <div class="col-picker-item" onclick="colPickerToggle(17,this)"><input type="checkbox" checked> MiniMock #2</div>
+          <div class="col-picker-item" onclick="colPickerToggle(18,this)"><input type="checkbox" checked> Reg. Mock</div>
+          <div class="col-picker-item" onclick="colPickerToggle(19,this)"><input type="checkbox" checked> Mock Exam</div>
+          <div class="col-picker-item" onclick="colPickerToggle(20,this)"><input type="checkbox" checked> Supp. Requested</div>
+          <div class="col-picker-item" onclick="colPickerToggle(21,this)"><input type="checkbox" checked> Exam Prep</div>
           <div class="col-picker-divider"></div>
           <div class="col-picker-group">Meta</div>
-          <div class="col-picker-item" onclick="colPickerToggle(21,this)"><input type="checkbox" checked> Progress</div>
-          <div class="col-picker-item" onclick="colPickerToggle(22,this)"><input type="checkbox" checked> Program</div>
+          <div class="col-picker-item" onclick="colPickerToggle(22,this)"><input type="checkbox" checked> Progress</div>
+          <div class="col-picker-item" onclick="colPickerToggle(23,this)"><input type="checkbox" checked> Program</div>
           <div class="col-picker-divider"></div>
           <button class="col-picker-reset" onclick="colPickerReset()">↺ Show all columns</button>
         </div>
@@ -1899,19 +1907,21 @@ window.addEventListener('DOMContentLoaded', init);
             <thead>
               <!-- Group header row -->
               <tr class="group-row">
-                <th colspan="6" class="frozen col-group-identity">Identity</th>
+                <th colspan="1" class="frozen col-group-identity">Identity</th>
+                <th colspan="6" class="col-group-identity" style="background:var(--surface)!important;color:var(--muted)!important">Info</th>
                 <th colspan="5" class="col-group-events">📅 Events w/ Date</th>
                 <th colspan="10" class="col-group-checkboxes">✓ Checkboxes</th>
                 <th colspan="2" class="col-group-meta">Meta</th>
               </tr>
               <!-- Column header row -->
               <tr>
-                <th class="frozen" onclick="rosterSort('name')">Teacher <span class="sort-arrow" id="sort-arrow-name">↕</span></th>
-                <th class="frozen" onclick="rosterSort('school')">School</th>
-                <th class="frozen" onclick="rosterSort('district')">District</th>
-                <th class="frozen" onclick="rosterSort('course')">Course</th>
-                <th class="frozen" onclick="rosterSort('crpYear')">Yr</th>
-                <th class="frozen frozen-last" onclick="rosterSort('status')">Status</th>
+                <th class="frozen frozen-last" onclick="rosterSort('name')">Teacher <span class="sort-arrow" id="sort-arrow-name">↕</span></th>
+                <th onclick="rosterSort('school')">School</th>
+                <th onclick="rosterSort('schoolAddress')">School Address</th>
+                <th onclick="rosterSort('district')">District</th>
+                <th onclick="rosterSort('course')">Course</th>
+                <th onclick="rosterSort('crpYear')">Yr</th>
+                <th onclick="rosterSort('status')">Status</th>
                 <th>Fall Site Visit</th>
                 <th>Supp. Content</th>
                 <th>Vertical Team 1</th>
@@ -2148,12 +2158,13 @@ function renderRosterTable() {
     };
 
     return `<tr class="${isSelected ? 'selected-row' : ''}">
-      <td class="frozen"><span class="teacher-name-link" onclick="selectTeacher('${t.id}')">${t.lastName}, ${t.firstName}</span></td>
-      <td class="frozen" style="max-width:160px;overflow:hidden;text-overflow:ellipsis">${t.school}</td>
-      <td class="frozen" style="font-size:0.72rem;color:var(--muted);max-width:130px;overflow:hidden;text-overflow:ellipsis">${t.district}</td>
-      <td class="frozen"><span class="course-chip ${chipClass}">${t.course}</span></td>
-      <td class="frozen" style="text-align:center"><span class="crp-year y${t.crpYear}">${t.crpYear}</span></td>
-      <td class="frozen frozen-last"><span class="status-chip ${statusClass}">${t.status}</span></td>
+      <td class="frozen frozen-last"><span class="teacher-name-link" onclick="selectTeacher('${t.id}')">${t.lastName}, ${t.firstName}</span></td>
+      <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis">${t.school}</td>
+      <td style="font-size:0.72rem;color:var(--muted);max-width:180px;overflow:hidden;text-overflow:ellipsis">${data.schoolAddress || SCHOOL_ADDRESSES[t.school] || '<span style="color:var(--muted);font-style:italic">—</span>'}</td>
+      <td style="font-size:0.72rem;color:var(--muted);max-width:130px;overflow:hidden;text-overflow:ellipsis">${t.district}</td>
+      <td><span class="course-chip ${chipClass}">${t.course}</span></td>
+      <td style="text-align:center"><span class="crp-year y${t.crpYear}">${t.crpYear}</span></td>
+      <td><span class="status-chip ${statusClass}">${t.status}</span></td>
       ${dateCb('fallSiteVisit')}
       ${dateCb('supplementalVisit')}
       ${dateCb('verticalTeam1')}
@@ -2240,7 +2251,7 @@ function flashSave(id) {
 // ═══════════════════════════════════════════════════
 // COLUMN PICKER
 // ═══════════════════════════════════════════════════
-const COL_STORAGE_KEY = 'akHiddenCols';
+const COL_STORAGE_KEY = 'akHiddenCols_v2'; // v2: col indices shifted after adding School Address + unfreezing
 
 function getHiddenCols() {
   try { return new Set(JSON.parse(localStorage.getItem(COL_STORAGE_KEY)) || []); }
@@ -3068,7 +3079,8 @@ function renderConsultantTable() {
     const isSelected = c.id === consState.selectedId;
     const isMockYes = c.mockExamLeader === 'Y' || c.mockExamLeader === true;
     const subjOpts = ['','Bio','Chem','Phys','Env Sci'];
-    const subjSelect = (val, field) => `<select class="cons-cell-select" onchange="consInlineEdit('${c.id}','${field}',this.value)">${
+    const subjColorClass = v => ({Bio:'subj-bio',Chem:'subj-chem',Phys:'subj-phys','Env Sci':'subj-envsci'}[v]||'subj-none');
+    const subjSelect = (val, field) => `<select class="cons-cell-select ${subjColorClass(val)}" onchange="consInlineEdit('${c.id}','${field}',this.value);this.className='cons-cell-select '+({'Bio':'subj-bio',Chem:'subj-chem',Phys:'subj-phys','Env Sci':'subj-envsci'}[this.value]||'subj-none')">${
       subjOpts.map(o => `<option value="${o}" ${val===o?'selected':''}>${o||'—'}</option>`).join('')
     }</select>`;
     const numInput = (val, field) => `<input type="number" min="0" class="cons-cell-number" value="${val??''}" placeholder="—" onchange="consInlineEdit('${c.id}','${field}',this.value===''?null:Number(this.value))">`;
