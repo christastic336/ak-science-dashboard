@@ -406,6 +406,22 @@ select:focus { outline: none; border-color: var(--accent); }
 .cons-name-link { color: var(--accent); cursor: pointer; font-weight: 600; text-decoration: none; }
 .cons-name-link:hover { text-decoration: underline; }
 
+/* Inline cell editing */
+.cons-table td.editable { padding: 0 !important; }
+.cons-cell-input { background: transparent; border: none; color: var(--text); font-size: 0.78rem; font-family: inherit; width: 100%; padding: 7px 10px; box-sizing: border-box; outline: none; }
+.cons-cell-input:focus { background: rgba(79,142,247,0.08); outline: 1px solid var(--accent); border-radius: 3px; }
+.cons-cell-input::placeholder { color: var(--muted); font-style: italic; }
+.cons-cell-select { background: transparent; border: none; color: var(--text); font-size: 0.78rem; font-family: inherit; width: 100%; padding: 7px 6px; box-sizing: border-box; outline: none; cursor: pointer; }
+.cons-cell-select:focus { background: rgba(79,142,247,0.08); outline: 1px solid var(--accent); border-radius: 3px; }
+.cons-cell-number { background: transparent; border: none; color: var(--text); font-size: 0.78rem; font-family: inherit; width: 100%; padding: 7px 10px; box-sizing: border-box; outline: none; text-align: center; }
+.cons-cell-number:focus { background: rgba(79,142,247,0.08); outline: 1px solid var(--accent); border-radius: 3px; }
+.cons-cell-notes { background: transparent; border: none; color: var(--muted); font-size: 0.75rem; font-family: inherit; width: 100%; padding: 7px 10px; box-sizing: border-box; outline: none; resize: none; height: 34px; font-style: italic; }
+.cons-cell-notes:focus { background: rgba(79,142,247,0.08); outline: 1px solid var(--accent); border-radius: 3px; color: var(--text); font-style: normal; height: 60px; }
+.cons-name-cell { display: flex; flex-direction: column; gap: 1px; padding: 4px 6px; }
+.cons-name-cell input { background: transparent; border: none; color: var(--text); font-size: 0.75rem; font-family: inherit; width: 100%; padding: 2px 4px; outline: none; border-radius: 3px; }
+.cons-name-cell input:first-child { font-weight: 700; color: var(--accent); }
+.cons-name-cell input:focus { background: rgba(79,142,247,0.08); outline: 1px solid var(--accent); }
+
 /* ─── CONSULTANT MODAL ─── */
 .cons-modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 500; display: flex; align-items: center; justify-content: center; }
 .cons-modal-backdrop.hidden { display: none; }
@@ -3034,25 +3050,39 @@ function renderConsultantTable() {
   tbody.innerHTML = consultants.map(c => {
     const data = getConsultantData(c.id);
     const isSelected = c.id === consState.selectedId;
-    const mockVal = c.mockExamLeader;
-    const isMockYes = mockVal === 'Y' || mockVal === '1' || mockVal === 1 || mockVal === true;
+    const isMockYes = c.mockExamLeader === 'Y' || c.mockExamLeader === true;
+    const subjOpts = ['','Bio','Chem','Phys','Env Sci'];
+    const subjSelect = (val, field) => `<select class="cons-cell-select" onchange="consInlineEdit('${c.id}','${field}',this.value)">${
+      subjOpts.map(o => `<option value="${o}" ${val===o?'selected':''}>${o||'—'}</option>`).join('')
+    }</select>`;
+    const numInput = (val, field) => `<input type="number" min="0" class="cons-cell-number" value="${val??''}" placeholder="—" onchange="consInlineEdit('${c.id}','${field}',this.value===''?null:Number(this.value))">`;
 
-    return `<tr class="${isSelected ? 'selected-row' : ''}" onclick="selectConsultant('${c.id}')">
-      <td class="frozen frozen-last"><span class="cons-name-link">${c.lastName}, ${c.firstName}</span></td>
-      <td style="font-size:0.75rem;line-height:1.4">${c.address1 ? c.address1 + (c.address2 ? '<br><span style="color:var(--muted)">' + c.address2 + '</span>' : '') : '<span style="color:var(--muted);font-style:italic">—</span>'}</td>
+    return `<tr class="${isSelected ? 'selected-row' : ''}">
+      <td class="frozen frozen-last editable" onclick="selectConsultant('${c.id}')">
+        <div class="cons-name-cell">
+          <input value="${(c.lastName||'').replace(/"/g,'&quot;')}" placeholder="Last name" onchange="consInlineEdit('${c.id}','lastName',this.value)" onclick="event.stopPropagation()" title="Last name">
+          <input value="${(c.firstName||'').replace(/"/g,'&quot;')}" placeholder="First name" onchange="consInlineEdit('${c.id}','firstName',this.value)" onclick="event.stopPropagation()" title="First name">
+        </div>
+      </td>
+      <td class="editable">
+        <input class="cons-cell-input" value="${(c.address1||'').replace(/"/g,'&quot;')}" placeholder="Street…" onchange="consInlineEdit('${c.id}','address1',this.value)" style="border-bottom:1px solid var(--border)">
+        <input class="cons-cell-input" value="${(c.address2||'').replace(/"/g,'&quot;')}" placeholder="City, State ZIP…" onchange="consInlineEdit('${c.id}','address2',this.value)" style="color:var(--muted)">
+      </td>
       <td style="text-align:center">
         <input type="checkbox" ${c.contract === 'active' ? 'checked' : ''} onclick="toggleContract('${c.id}', this)" style="width:15px;height:15px;accent-color:var(--green);cursor:pointer">
       </td>
-      <td>${subjChipHtml(c.subj1)}</td>
-      <td>${subjChipHtml(c.subj2)}</td>
-      <td style="text-align:center">${c.launchDayBlocks != null ? c.launchDayBlocks : '<span style="color:var(--muted)">—</span>'}</td>
-      <td style="text-align:center">${c.ffssBlocks != null ? c.ffssBlocks : '<span style="color:var(--muted)">—</span>'}</td>
-      <td style="text-align:center">${c.masterSeries != null ? c.masterSeries : '<span style="color:var(--muted)">—</span>'}</td>
-      <td style="text-align:center">${c.mentorBlocks != null ? c.mentorBlocks : '<span style="color:var(--muted)">—</span>'}</td>
-      <td style="text-align:center">${mockVal != null ? (isMockYes ? '<span style="color:var(--green);font-weight:700">Y</span>' : '<span style="color:var(--muted)">N</span>') : '<span style="color:var(--muted)">—</span>'}</td>
-      <td style="text-align:right">${c.stipend != null ? '$' + c.stipend : '<span style="color:var(--muted)">—</span>'}</td>
-      <td style="text-align:right">${c.travelAllowance != null ? '$' + c.travelAllowance.toLocaleString() : '<span style="color:var(--muted)">—</span>'}</td>
-      <td style="color:var(--muted);font-style:italic;font-size:0.75rem;max-width:160px;overflow:hidden;text-overflow:ellipsis">${data.notes ? data.notes.substring(0, 40) + (data.notes.length > 40 ? '…' : '') : ''}</td>
+      <td class="editable">${subjSelect(c.subj1,'subj1')}</td>
+      <td class="editable">${subjSelect(c.subj2,'subj2')}</td>
+      <td class="editable">${numInput(c.launchDayBlocks,'launchDayBlocks')}</td>
+      <td class="editable">${numInput(c.ffssBlocks,'ffssBlocks')}</td>
+      <td class="editable">${numInput(c.masterSeries,'masterSeries')}</td>
+      <td class="editable">${numInput(c.mentorBlocks,'mentorBlocks')}</td>
+      <td style="text-align:center">
+        <input type="checkbox" ${isMockYes ? 'checked' : ''} onchange="consInlineEdit('${c.id}','mockExamLeader',this.checked?'Y':null)" style="width:15px;height:15px;accent-color:var(--green);cursor:pointer">
+      </td>
+      <td class="editable"><input type="number" min="0" class="cons-cell-number" value="${c.stipend??''}" placeholder="—" onchange="consInlineEdit('${c.id}','stipend',this.value===''?null:Number(this.value))"></td>
+      <td class="editable"><input type="number" min="0" class="cons-cell-number" value="${c.travelAllowance??''}" placeholder="—" onchange="consInlineEdit('${c.id}','travelAllowance',this.value===''?null:Number(this.value))"></td>
+      <td class="editable"><textarea class="cons-cell-notes" placeholder="Notes…" onchange="consInlineNoteEdit('${c.id}',this.value)">${data.notes||''}</textarea></td>
     </tr>`;
   }).join('');
 
@@ -3074,6 +3104,30 @@ function renderConsultantTable() {
     const idx = [...cell.parentElement.children].filter(c2 => c2.classList.contains('frozen')).indexOf(cell);
     if (leftMap[idx] !== undefined) cell.style.left = leftMap[idx] + 'px';
   });
+}
+
+// Inline cell edit — updates the CONSULTANTS array and syncs to Sheets
+function consInlineEdit(id, field, value) {
+  const c = CONSULTANTS.find(x => x.id === id);
+  if (!c) return;
+  c[field] = value === '' ? null : value;
+  // If the detail panel is open for this consultant, refresh it
+  if (consState.selectedId === id) renderConsultantPanel(id);
+  // Sync to Sheets
+  if (typeof debouncedWrite === 'function' && typeof _gsiAccessToken !== 'undefined' && _gsiAccessToken) {
+    debouncedWrite('consRow_' + id, () => syncConsultantRow(id), 1000);
+  }
+}
+
+// Inline notes edit — uses the consultant data store (localStorage/Sheets)
+function consInlineNoteEdit(id, value) {
+  const data = getConsultantData(id);
+  data.notes = value;
+  saveConsultantData(id, data);
+  if (consState.selectedId === id) renderConsultantPanel(id);
+  if (typeof debouncedWrite === 'function' && typeof _gsiAccessToken !== 'undefined' && _gsiAccessToken) {
+    debouncedWrite('consNote_' + id, () => syncConsultantNote(id), 1500);
+  }
 }
 
 function selectConsultant(id) {
