@@ -2894,6 +2894,7 @@ function copyRosterEmails() {
           <colgroup>
             <col style="width:150px"><!-- Name -->
             <col style="width:220px"><!-- Address -->
+            <col style="width:200px"><!-- Email -->
             <col style="width:72px"><!-- Contract -->
             <col style="width:95px"><!-- Subj 1 -->
             <col style="width:95px"><!-- Subj 2 -->
@@ -2909,7 +2910,7 @@ function copyRosterEmails() {
           <thead>
             <tr class="group-row">
               <th colspan="1" class="frozen col-group-identity">Identity</th>
-              <th colspan="2" class="col-group-identity" style="background:var(--surface)!important;color:var(--muted)!important">Info</th>
+              <th colspan="3" class="col-group-identity" style="background:var(--surface)!important;color:var(--muted)!important">Info</th>
               <th colspan="2" class="col-group-events" style="background:rgba(167,139,250,0.1);color:#a78bfa">Subjects</th>
               <th colspan="5" class="col-group-checkboxes" style="background:rgba(52,211,153,0.08);color:var(--green)">✓ Engagement</th>
               <th colspan="3" class="col-group-meta">Contract Details</th>
@@ -2917,6 +2918,7 @@ function copyRosterEmails() {
             <tr>
               <th class="frozen frozen-last" onclick="consSort('lastName')" id="cons-sort-lastName">Name <span class="sort-arrow">↕</span></th>
               <th onclick="consSort('address2')">Address</th>
+              <th onclick="consSort('email')">Email</th>
               <th onclick="consSort('contract')" style="text-align:center">Contract</th>
               <th onclick="consSort('subj1')">Subj 1</th>
               <th onclick="consSort('subj2')">Subj 2</th>
@@ -3167,6 +3169,9 @@ function renderConsultantTable() {
       <td class="editable">
         <input class="cons-cell-input" value="${(c.address1||'').replace(/"/g,'&quot;')}" placeholder="Street…" onchange="consInlineEdit('${c.id}','address1',this.value)" style="border-bottom:1px solid var(--border)">
         <input class="cons-cell-input" value="${(c.address2||'').replace(/"/g,'&quot;')}" placeholder="City, State ZIP…" onchange="consInlineEdit('${c.id}','address2',this.value)" style="color:var(--muted)">
+      </td>
+      <td class="editable">
+        <input class="cons-cell-input" type="email" value="${(c.email||'').replace(/"/g,'&quot;')}" placeholder="email@…" onchange="consInlineEdit('${c.id}','email',this.value)" title="${(c.email||'').replace(/"/g,'&quot;')}">
       </td>
       <td style="text-align:center">
         <input type="checkbox" ${c.contract === 'active' ? 'checked' : ''} onclick="toggleContract('${c.id}', this)" style="width:15px;height:15px;accent-color:var(--green);cursor:pointer">
