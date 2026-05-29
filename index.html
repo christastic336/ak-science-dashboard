@@ -3515,6 +3515,16 @@ function updateAuthUI(signedIn) {
     btn.classList.add('signed-in');
     ind.classList.remove('hidden');
     setSyncState('synced');
+    // Show one-time seed button if it doesn't exist yet
+    if (!document.getElementById('seed-btn')) {
+      const seedBtn = document.createElement('button');
+      seedBtn.id = 'seed-btn';
+      seedBtn.textContent = '⬆ Seed Sheet';
+      seedBtn.title = 'Push all local data to Google Sheets (one-time setup)';
+      seedBtn.style.cssText = 'background:var(--accent);border:none;color:#fff;padding:5px 12px;border-radius:6px;cursor:pointer;font-size:0.75rem;font-weight:600;margin-left:8px;';
+      seedBtn.onclick = seedSheetData;
+      document.querySelector('.header-controls').appendChild(seedBtn);
+    }
   } else {
     btn.innerHTML = '<span>Sign in with Google</span>';
     btn.classList.remove('signed-in');
@@ -3817,6 +3827,45 @@ async function syncDeleteConsultant(id) {
   } catch(err) {
     console.error('syncDeleteConsultant:', err);
     showSyncToast('Could not delete from Sheets: ' + err.message);
+  }
+}
+
+// ─── SEED SHEET WITH ALL LOCAL DATA ─────────────────────────────────
+async function seedSheetData() {
+  if (!_gsiAccessToken) return;
+  const btn = document.getElementById('seed-btn');
+  if (btn) { btn.textContent = 'Seeding…'; btn.disabled = true; }
+  setSyncState('syncing');
+  try {
+    // Check if Consultants sheet already has data beyond the header
+    const check = await sheetsGet('Consultants!A1:A2');
+    const rows = (check.values || []);
+    const hasData = rows.length > 1 && rows[1][0] && !rows[1][0].startsWith('_deleted_');
+    if (hasData) {
+      showSyncToast('Sheet already has data — skipping seed to avoid duplicates.');
+      if (btn) { btn.textContent = '✓ Already seeded'; }
+      setSyncState('synced');
+      return;
+    }
+
+    // Write all consultants (skip header row — already there)
+    const consRows = CONSULTANTS.map(c => consultantToRow(c));
+    await sheetsAppend('Consultants', consRows);
+
+    // Write all teachers
+    const teacherRows = TEACHERS.map(t => teacherToRow(t));
+    await sheetsAppend('Teachers', teacherRows);
+
+    setSyncState('synced');
+    showSyncToast('✓ Sheet seeded with ' + CONSULTANTS.length + ' consultants and ' + TEACHERS.length + ' teachers.');
+    if (btn) { btn.textContent = '✓ Seeded!'; btn.style.background = 'var(--green)'; }
+    // Hide button after 3 seconds
+    setTimeout(() => { if (btn) btn.remove(); }, 3000);
+  } catch(err) {
+    console.error('seedSheetData error:', err);
+    setSyncState('error');
+    showSyncToast('Seed failed: ' + err.message);
+    if (btn) { btn.textContent = '⚠ Seed failed — retry'; btn.disabled = false; }
   }
 }
 
