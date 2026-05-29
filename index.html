@@ -4256,10 +4256,13 @@ async function initCoverageMap() {
       })
       .attr('text-anchor', 'middle')
       .attr('dominant-baseline', 'middle')
-      .attr('font-size', Math.max(5, Math.min(8, W / 140)))
+      .attr('font-size', 9)
       .attr('font-family', "'Segoe UI', system-ui, sans-serif")
-      .attr('font-weight', '500')
-      .attr('fill', 'rgba(255,255,255,0.45)')
+      .attr('font-weight', '600')
+      .attr('fill', 'rgba(255,255,255,0.75)')
+      .attr('stroke', 'rgba(0,0,0,0.4)')
+      .attr('stroke-width', 0.3)
+      .attr('paint-order', 'stroke')
       .attr('pointer-events', 'none')
       .text(d => KY_COUNTY_NAMES[String(d.id)] || '');
 
