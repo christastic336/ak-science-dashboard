@@ -350,8 +350,8 @@ select:focus { outline: none; border-color: var(--accent); }
 .cons-search:focus { outline: none; border-color: var(--accent); }
 .cons-search::placeholder { color: var(--muted); }
 .cons-stats { font-size: 0.75rem; color: var(--muted); white-space: nowrap; }
-.cons-table-wrap { flex: 1; overflow: auto; }
-.cons-table { border-collapse: separate; border-spacing: 0; font-size: 0.78rem; white-space: nowrap; width: 100%; }
+.cons-table-wrap { flex: 1; overflow: auto; min-width: 0; }
+.cons-table { border-collapse: separate; border-spacing: 0; font-size: 0.78rem; white-space: nowrap; width: 100%; table-layout: fixed; }
 .cons-table thead th { position: sticky; top: 0; z-index: 3; background: var(--surface2); color: var(--muted); font-weight: 600; font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.06em; padding: 8px 10px; border-bottom: 2px solid var(--border); border-right: 1px solid var(--border); cursor: pointer; user-select: none; white-space: nowrap; }
 .cons-table thead th:hover { color: var(--text); }
 .cons-table thead th.sorted { color: var(--accent); }
@@ -408,8 +408,8 @@ select:focus { outline: none; border-color: var(--accent); }
 
 /* Inline cell editing */
 .cons-table td.editable { padding: 0 !important; }
-.cons-cell-input { background: transparent; border: none; color: var(--text); font-size: 0.78rem; font-family: inherit; width: 100%; padding: 7px 10px; box-sizing: border-box; outline: none; }
-.cons-cell-input:focus { background: rgba(79,142,247,0.08); outline: 1px solid var(--accent); border-radius: 3px; }
+.cons-cell-input { background: transparent; border: none; color: var(--text); font-size: 0.75rem; font-family: inherit; width: 100%; padding: 4px 8px; box-sizing: border-box; outline: none; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cons-cell-input:focus { background: rgba(79,142,247,0.08); outline: 1px solid var(--accent); border-radius: 3px; overflow: visible; }
 .cons-cell-input::placeholder { color: var(--muted); font-style: italic; }
 .cons-cell-select { background: var(--surface); border: none; color: var(--text); font-size: 0.78rem; font-family: inherit; width: 100%; padding: 7px 6px; box-sizing: border-box; outline: none; cursor: pointer; }
 .cons-cell-select:focus { background: rgba(79,142,247,0.08); outline: 1px solid var(--accent); border-radius: 3px; }
@@ -418,8 +418,8 @@ select:focus { outline: none; border-color: var(--accent); }
 .cons-cell-number:focus { background: rgba(79,142,247,0.08); outline: 1px solid var(--accent); border-radius: 3px; }
 .cons-cell-notes { background: transparent; border: none; color: var(--muted); font-size: 0.75rem; font-family: inherit; width: 100%; padding: 7px 10px; box-sizing: border-box; outline: none; resize: none; height: 34px; font-style: italic; }
 .cons-cell-notes:focus { background: rgba(79,142,247,0.08); outline: 1px solid var(--accent); border-radius: 3px; color: var(--text); font-style: normal; height: 60px; }
-.cons-name-cell { display: flex; flex-direction: column; gap: 1px; padding: 4px 6px; }
-.cons-name-cell input { background: transparent; border: none; color: var(--text); font-size: 0.75rem; font-family: inherit; width: 100%; padding: 2px 4px; outline: none; border-radius: 3px; }
+.cons-name-cell { display: flex; flex-direction: column; gap: 0; padding: 3px 4px; }
+.cons-name-cell input { background: transparent; border: none; color: var(--text); font-size: 0.75rem; font-family: inherit; width: 100%; padding: 2px 4px; outline: none; border-radius: 3px; box-sizing: border-box; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .cons-name-cell input:first-child { font-weight: 700; color: var(--accent); }
 .cons-name-cell input:focus { background: rgba(79,142,247,0.08); outline: 1px solid var(--accent); }
 
@@ -2811,6 +2811,21 @@ function exportRosterCSV() {
     <div style="display:flex;flex:1;overflow:hidden">
       <div class="cons-table-wrap" id="cons-table-wrap">
         <table class="cons-table" id="cons-table">
+          <colgroup>
+            <col style="min-width:140px;width:140px"><!-- Name -->
+            <col style="min-width:200px;width:200px"><!-- Address -->
+            <col style="min-width:70px;width:70px"><!-- Contract -->
+            <col style="min-width:90px;width:90px"><!-- Subj 1 -->
+            <col style="min-width:90px;width:90px"><!-- Subj 2 -->
+            <col style="min-width:80px;width:80px"><!-- Launch Day -->
+            <col style="min-width:80px;width:80px"><!-- FF/SS -->
+            <col style="min-width:90px;width:90px"><!-- Master Series -->
+            <col style="min-width:85px;width:85px"><!-- Mentor -->
+            <col style="min-width:75px;width:75px"><!-- Mock -->
+            <col style="min-width:80px;width:80px"><!-- Stipend -->
+            <col style="min-width:90px;width:90px"><!-- Travel -->
+            <col style="min-width:160px;width:160px"><!-- Notes -->
+          </colgroup>
           <thead>
             <tr class="group-row">
               <th colspan="1" class="frozen col-group-identity">Identity</th>
