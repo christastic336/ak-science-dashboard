@@ -589,6 +589,28 @@ select:focus { outline: none; border-color: var(--accent); }
   See <a onclick="alert('Open SETUP.md in the project folder for step-by-step instructions.')">SETUP.md</a> for instructions to enable cloud sync.
 </div>
 
+<!-- Sign-in reminder modal -->
+<style>
+#signin-modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.65); z-index: 1200; display: none; align-items: center; justify-content: center; }
+#signin-modal-backdrop.show { display: flex; }
+#signin-modal { background: var(--surface); border: 2px solid var(--accent); border-radius: 14px; padding: 32px 36px; max-width: 440px; text-align: center; box-shadow: 0 12px 48px rgba(0,0,0,0.6); }
+#signin-modal .sm-icon { font-size: 2.6rem; line-height: 1; margin-bottom: 10px; }
+#signin-modal h2 { margin: 0 0 8px; font-size: 1.35rem; color: var(--text); }
+#signin-modal p { margin: 0 0 22px; color: var(--muted); font-size: 0.92rem; line-height: 1.5; }
+#signin-modal .sm-btn { background: var(--accent); border: none; color: #fff; padding: 11px 26px; border-radius: 8px; cursor: pointer; font-size: 0.95rem; font-weight: 700; }
+#signin-modal .sm-btn:hover { filter: brightness(1.08); }
+#signin-modal .sm-dismiss { display: block; margin: 14px auto 0; background: none; border: none; color: var(--muted); font-size: 0.78rem; cursor: pointer; text-decoration: underline; }
+</style>
+<div id="signin-modal-backdrop">
+  <div id="signin-modal" role="dialog" aria-modal="true">
+    <div class="sm-icon">🔒</div>
+    <h2>Sign in to save your work</h2>
+    <p>You're not signed in to Google. Changes you make <strong>won't sync to the spreadsheet</strong> until you do. Sign in now so nothing gets lost.</p>
+    <button class="sm-btn" onclick="gsiSignIn()">Sign in with Google</button>
+    <button class="sm-dismiss" onclick="dismissSigninModal()">Continue without signing in</button>
+  </div>
+</div>
+
 <!-- Error toast -->
 <div class="sync-toast" id="sync-toast"></div>
 
@@ -4183,6 +4205,10 @@ let _gsiUserPicture = null;
     document.getElementById('auth-btn').style.display = 'none';
     document.getElementById('sync-indicator').classList.remove('hidden');
     document.getElementById('sync-indicator').textContent = '⚠ Offline';
+  } else {
+    // Sync is configured but we're not signed in yet — nudge after a short delay
+    // (gives any silent token restore a moment to complete first).
+    setTimeout(() => { if (!_gsiAccessToken) showSigninModal(); }, 1200);
   }
 })();
 
@@ -4230,9 +4256,31 @@ function gsiSignOut() {
   setSyncState('offline');
 }
 
+// ─── SIGN-IN REMINDER MODAL ──────────────────────────────────────────
+let _signinModalDismissed = false;
+function showSigninModal() {
+  // Don't show if sync isn't configured, already signed in, or user dismissed it
+  if (!CLIENT_ID || !SHEET_ID) return;
+  if (_gsiAccessToken) return;
+  if (_signinModalDismissed) return;
+  const m = document.getElementById('signin-modal-backdrop');
+  if (m) m.classList.add('show');
+}
+function hideSigninModal() {
+  const m = document.getElementById('signin-modal-backdrop');
+  if (m) m.classList.remove('show');
+}
+function dismissSigninModal() {
+  _signinModalDismissed = true; // stays dismissed for this session only
+  hideSigninModal();
+}
+
 function updateAuthUI(signedIn) {
   const btn = document.getElementById('auth-btn');
   const ind = document.getElementById('sync-indicator');
+  // Hide the reminder once signed in; show it again on sign-out
+  if (signedIn) hideSigninModal();
+  else showSigninModal();
   if (signedIn) {
     const img  = _gsiUserPicture ? `<img src="${_gsiUserPicture}" class="auth-avatar" alt="">` : '👤';
     const mail = _gsiUserEmail ? `<span class="auth-email">${_gsiUserEmail}</span>` : '';
