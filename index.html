@@ -1917,6 +1917,7 @@ window.addEventListener('DOMContentLoaded', init);
     <div class="roster-topbar">
       <h2>AdvanceKentucky Science Teachers <span style="color:var(--muted);font-weight:400;font-size:0.8rem">2026–27</span></h2>
       <input type="text" class="roster-search" id="roster-search" placeholder="Search name, school, district…" oninput="renderRosterTable()">
+      <button onclick="openTeacherModal()" style="background:var(--accent);border:none;color:#fff;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:0.82rem;font-weight:600;white-space:nowrap">+ Add Teacher</button>
       <div class="view-toggle">
         <button class="view-toggle-btn active" id="roster-list-btn" onclick="rosterSetView('list')">☰ List</button>
         <button class="view-toggle-btn" id="roster-map-btn" onclick="rosterSetView('map')">🗺 Map</button>
@@ -2143,6 +2144,104 @@ function getTeacherData(id) {
 }
 function saveTeacherData(id, data) {
   localStorage.setItem('akTeacher_' + id, JSON.stringify(data));
+}
+
+// ─── ADD / EDIT TEACHER MODAL ────────────────────────────────────────
+// Runtime-added teachers (id starts with 'ta') persist to localStorage and
+// sync to the Google Sheet via syncTeacherRow when signed in.
+const TEACHER_ADDED_KEY = 'akTeachersAdded';
+let _teacherModalEditId = null;
+
+function loadAddedTeachers() {
+  try {
+    const saved = localStorage.getItem(TEACHER_ADDED_KEY);
+    if (!saved) return;
+    JSON.parse(saved).forEach(t => { if (!TEACHERS.find(x => x.id === t.id)) TEACHERS.push(t); });
+  } catch(e) {}
+}
+function persistAddedTeachers() {
+  try {
+    const added = TEACHERS.filter(t => String(t.id).startsWith('ta'));
+    localStorage.setItem(TEACHER_ADDED_KEY, JSON.stringify(added));
+  } catch(e) {}
+}
+
+function openTeacherModal(editId) {
+  _teacherModalEditId = editId || null;
+  const t = editId ? TEACHERS.find(x => x.id === editId) : null;
+  document.getElementById('teacher-modal-title').textContent = editId ? 'Edit Teacher' : 'Add Teacher';
+  document.getElementById('tm-firstName').value = t?.firstName || '';
+  document.getElementById('tm-lastName').value = t?.lastName || '';
+  document.getElementById('tm-school').value = t?.school || '';
+  document.getElementById('tm-district').value = t?.district || '';
+  document.getElementById('tm-course').value = t?.course || 'Bio';
+  document.getElementById('tm-crpYear').value = t?.crpYear || '1';
+  document.getElementById('tm-program').value = t?.program || 'Individual';
+  document.getElementById('tm-status').value = t?.status || 'New';
+  document.getElementById('tm-teacherEmail').value = t?.teacherEmail || '';
+  document.getElementById('tm-principalEmail').value = t?.principalEmail || '';
+  document.getElementById('tm-mentor').checked = t?.mentorRequested === 'Yes';
+  document.getElementById('tm-firstDayNotes').value = t?.firstDayNotes || '';
+  document.getElementById('teacher-modal-backdrop').classList.remove('hidden');
+  document.getElementById('tm-firstName').focus();
+}
+
+function closeTeacherModal() {
+  document.getElementById('teacher-modal-backdrop').classList.add('hidden');
+  _teacherModalEditId = null;
+}
+
+function teacherModalBackdropClick(e) {
+  if (e.target === document.getElementById('teacher-modal-backdrop')) closeTeacherModal();
+}
+
+function saveTeacherModal() {
+  const firstName = document.getElementById('tm-firstName').value.trim();
+  const lastName = document.getElementById('tm-lastName').value.trim();
+  const school = document.getElementById('tm-school').value.trim();
+  let valid = true;
+  [['tm-firstName', firstName], ['tm-lastName', lastName], ['tm-school', school]].forEach(([elId, v]) => {
+    document.getElementById(elId).style.borderColor = v ? '' : 'var(--red)';
+    if (!v) valid = false;
+  });
+  if (!valid) return;
+
+  const data = {
+    lastName, firstName, school,
+    district: document.getElementById('tm-district').value.trim(),
+    course: document.getElementById('tm-course').value,
+    crpYear: document.getElementById('tm-crpYear').value,
+    program: document.getElementById('tm-program').value,
+    confirmed: '',
+    status: document.getElementById('tm-status').value,
+    firstDayNotes: document.getElementById('tm-firstDayNotes').value.trim(),
+    mentorRequested: document.getElementById('tm-mentor').checked ? 'Yes' : '',
+    teacherEmail: document.getElementById('tm-teacherEmail').value.trim(),
+    principalEmail: document.getElementById('tm-principalEmail').value.trim(),
+  };
+
+  let id;
+  if (_teacherModalEditId) {
+    id = _teacherModalEditId;
+    const idx = TEACHERS.findIndex(x => x.id === id);
+    if (idx !== -1) Object.assign(TEACHERS[idx], data);
+  } else {
+    id = 'ta' + Date.now();
+    data.id = id;
+    TEACHERS.push(data);
+  }
+
+  persistAddedTeachers();
+  // Sync to Google Sheet (append for new, update for existing) when signed in
+  if (typeof _gsiAccessToken !== 'undefined' && _gsiAccessToken && typeof debouncedWrite === 'function') {
+    debouncedWrite('teacherRow_' + id, () => syncTeacherRow(id), 800);
+  }
+
+  closeTeacherModal();
+  renderRosterTable();
+  applyColVisibility();
+  rosterState.selectedId = id;
+  selectTeacher(id);
 }
 
 function getEventProgress(id) {
@@ -2496,7 +2595,10 @@ function renderTeacherPanel(id) {
           ${t.mentorRequested === 'Yes' ? '&nbsp;·&nbsp;<span style="color:var(--yellow);font-size:0.72rem">⭐ Mentor Requested</span>' : ''}
         </div>
       </div>
-      <button class="tp-close" onclick="closeTeacherPanel()">✕</button>
+      <div style="display:flex;gap:6px;align-items:flex-start">
+        <button onclick="openTeacherModal('${id}')" title="Edit teacher" style="background:none;border:1px solid var(--accent);color:var(--accent);padding:4px 9px;border-radius:6px;cursor:pointer;font-size:0.75rem;font-weight:600;white-space:nowrap">✎ Edit</button>
+        <button class="tp-close" onclick="closeTeacherPanel()">✕</button>
+      </div>
     </div>
 
     <div class="tp-section">
@@ -3035,6 +3137,65 @@ function copyRosterEmails() {
     <div class="cons-modal-footer">
       <button class="btn-cancel" onclick="closeConsModal()">Cancel</button>
       <button class="btn-primary" onclick="saveConsModal()">Save Consultant</button>
+    </div>
+  </div>
+</div>
+
+<!-- ─── ADD / EDIT TEACHER MODAL ─── -->
+<div class="cons-modal-backdrop hidden" id="teacher-modal-backdrop" onclick="teacherModalBackdropClick(event)">
+  <div class="cons-modal" id="teacher-modal">
+    <div class="cons-modal-header">
+      <h3 id="teacher-modal-title">Add Teacher</h3>
+      <button class="cons-modal-close" onclick="closeTeacherModal()">✕</button>
+    </div>
+    <div class="cons-modal-body">
+      <div class="cons-field"><label>First Name *</label><input id="tm-firstName" placeholder="First name"></div>
+      <div class="cons-field"><label>Last Name *</label><input id="tm-lastName" placeholder="Last name"></div>
+      <div class="cons-field full-width"><label>School *</label><input id="tm-school" placeholder="e.g. Scott Co. HS"></div>
+      <div class="cons-field full-width"><label>District</label><input id="tm-district" placeholder="e.g. Scott Co. Schools"></div>
+      <div class="cons-field"><label>Course</label>
+        <select id="tm-course">
+          <option value="Bio">Biology</option>
+          <option value="Chem">Chemistry</option>
+          <option value="Env Sci">Env. Science</option>
+          <option value="Physics 1">Physics 1</option>
+          <option value="DC Bio">DC Bio</option>
+          <option value="DC Chem 101">DC Chem 101</option>
+        </select>
+      </div>
+      <div class="cons-field"><label>CRP Year</label>
+        <select id="tm-crpYear">
+          <option value="1">1</option>
+          <option value="2">2</option>
+          <option value="3">3</option>
+        </select>
+      </div>
+      <div class="cons-field"><label>Program</label>
+        <select id="tm-program">
+          <option value="Individual">Individual</option>
+          <option value="School">School</option>
+          <option value="GUK">GUK</option>
+        </select>
+      </div>
+      <div class="cons-field"><label>Status</label>
+        <select id="tm-status">
+          <option value="New">New</option>
+          <option value="Returning">Returning</option>
+          <option value="On Hold">On Hold</option>
+          <option value="Not Returning">Not Returning</option>
+        </select>
+      </div>
+      <div class="cons-field full-width"><label>Teacher Email</label><input id="tm-teacherEmail" type="email" placeholder="teacher@district.kyschools.us"></div>
+      <div class="cons-field full-width"><label>Principal Email</label><input id="tm-principalEmail" type="email" placeholder="principal@district.kyschools.us"></div>
+      <div class="cons-field full-width" style="display:flex;align-items:center;gap:8px;padding-top:4px">
+        <input type="checkbox" id="tm-mentor" style="width:15px;height:15px;accent-color:var(--accent);cursor:pointer;flex-shrink:0">
+        <label for="tm-mentor" style="font-size:0.82rem;color:var(--text);text-transform:none;letter-spacing:0;cursor:pointer;margin:0">Mentor Requested</label>
+      </div>
+      <div class="cons-field full-width"><label>First Day Notes</label><input id="tm-firstDayNotes" placeholder="Optional notes"></div>
+    </div>
+    <div class="cons-modal-footer">
+      <button class="btn-cancel" onclick="closeTeacherModal()">Cancel</button>
+      <button class="btn-primary" onclick="saveTeacherModal()">Save Teacher</button>
     </div>
   </div>
 </div>
@@ -3716,6 +3877,12 @@ function deleteConsultant(id) {
       if (idx !== -1) CONSULTANTS.splice(idx, 1);
     });
   }
+})();
+
+// On init: load runtime-added teachers so they survive refresh (offline) and
+// are present before the first roster render.
+(function initTeacherData() {
+  loadAddedTeachers();
 })();
 
 // ─── CONSULTANT COLUMN PICKER ───
