@@ -2166,6 +2166,44 @@ function persistAddedTeachers() {
   } catch(e) {}
 }
 
+// Track deleted seed teachers so they stay gone across reloads.
+const TEACHER_DELETED_KEY = 'akTeachersDeleted';
+function getDeletedTeacherIds() {
+  try { return new Set(JSON.parse(localStorage.getItem(TEACHER_DELETED_KEY)) || []); } catch(e) { return new Set(); }
+}
+function saveDeletedTeacherIds(set) {
+  try { localStorage.setItem(TEACHER_DELETED_KEY, JSON.stringify([...set])); } catch(e) {}
+}
+
+function deleteTeacher(id) {
+  const t = TEACHERS.find(x => x.id === id);
+  if (!t) return;
+  if (!confirm(`Delete ${t.firstName} ${t.lastName} (${t.school})? This cannot be undone.`)) return;
+
+  const idx = TEACHERS.findIndex(x => x.id === id);
+  if (idx !== -1) TEACHERS.splice(idx, 1);
+
+  if (String(id).startsWith('ta')) {
+    // runtime-added teacher — just drop from the added store
+    persistAddedTeachers();
+  } else {
+    // seed teacher — record the deletion so it stays gone on reload
+    const deleted = getDeletedTeacherIds();
+    deleted.add(id);
+    saveDeletedTeacherIds(deleted);
+  }
+
+  // Blank the row in the Google Sheet when signed in
+  if (typeof _gsiAccessToken !== 'undefined' && _gsiAccessToken) {
+    syncDeleteTeacher(id).catch(() => {});
+  }
+
+  if (rosterState.selectedId === id) rosterState.selectedId = null;
+  closeTeacherPanel();
+  renderRosterTable();
+  applyColVisibility();
+}
+
 function openTeacherModal(editId) {
   _teacherModalEditId = editId || null;
   const t = editId ? TEACHERS.find(x => x.id === editId) : null;
@@ -2597,6 +2635,7 @@ function renderTeacherPanel(id) {
       </div>
       <div style="display:flex;gap:6px;align-items:flex-start">
         <button onclick="openTeacherModal('${id}')" title="Edit teacher" style="background:none;border:1px solid var(--accent);color:var(--accent);padding:4px 9px;border-radius:6px;cursor:pointer;font-size:0.75rem;font-weight:600;white-space:nowrap">✎ Edit</button>
+        <button onclick="deleteTeacher('${id}')" title="Delete teacher" style="background:none;border:1px solid var(--red);color:var(--red);padding:4px 9px;border-radius:6px;cursor:pointer;font-size:0.75rem;font-weight:600;white-space:nowrap">🗑 Delete</button>
         <button class="tp-close" onclick="closeTeacherPanel()">✕</button>
       </div>
     </div>
@@ -3883,6 +3922,13 @@ function deleteConsultant(id) {
 // are present before the first roster render.
 (function initTeacherData() {
   loadAddedTeachers();
+  const deleted = getDeletedTeacherIds();
+  if (deleted.size > 0) {
+    deleted.forEach(id => {
+      const idx = TEACHERS.findIndex(x => x.id === id);
+      if (idx !== -1) TEACHERS.splice(idx, 1);
+    });
+  }
 })();
 
 // ─── CONSULTANT COLUMN PICKER ───
@@ -4619,6 +4665,12 @@ async function loadSheetsData() {
         // Coerce numeric strings back
         TEACHERS.unshift({ ...r });
       });
+      // Drop any rows the user deleted locally (and tombstoned sheet rows)
+      const deletedT = (typeof getDeletedTeacherIds === 'function') ? getDeletedTeacherIds() : new Set();
+      for (let i = TEACHERS.length - 1; i >= 0; i--) {
+        const tid = String(TEACHERS[i].id || '');
+        if (deletedT.has(TEACHERS[i].id) || tid.startsWith('_deleted_') || tid === '') TEACHERS.splice(i, 1);
+      }
     }
 
     // ── Consultants ──
@@ -4900,6 +4952,23 @@ async function syncDeleteConsultant(id) {
     }
   } catch(err) {
     console.error('syncDeleteConsultant:', err);
+    showSyncToast('Could not delete from Sheets: ' + err.message);
+  }
+}
+
+async function syncDeleteTeacher(id) {
+  if (!_gsiAccessToken) return;
+  try {
+    const colData = await findSheetRow('Teachers');
+    const rowIdx = colData.findIndex((r, i) => i > 0 && r[0] === id);
+    if (rowIdx !== -1) {
+      const sheetRow = rowIdx + 1;
+      const blank = Array(TEACHER_COLS.length).fill('');
+      blank[0] = '_deleted_' + id;
+      await sheetsPut(`Teachers!A${sheetRow}:N${sheetRow}`, [blank]);
+    }
+  } catch(err) {
+    console.error('syncDeleteTeacher:', err);
     showSyncToast('Could not delete from Sheets: ' + err.message);
   }
 }
