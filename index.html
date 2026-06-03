@@ -1906,9 +1906,14 @@ window.addEventListener('DOMContentLoaded', init);
       </div>
     </div>
     <div class="hm-control" style="flex:1">
-      <h3>Export</h3>
-      <button class="btn" onclick="exportRosterCSV()" style="width:100%;text-align:center;color:var(--accent)">⬇ Export Filtered CSV</button>
-      <button class="btn" onclick="copyRosterEmails()" style="width:100%;text-align:center;color:var(--accent);margin-top:8px">✉ Copy Emails (Outlook)</button>
+      <h3>Actions <span style="color:var(--muted);font-weight:400;font-size:0.72rem">(<span id="roster-sel-count">0</span> selected)</span></h3>
+      <div style="display:flex;gap:6px;margin-bottom:8px">
+        <button class="btn" onclick="teacherSelectAll()" style="flex:1;text-align:center;color:var(--accent)">☑ All</button>
+        <button class="btn" onclick="teacherSelectNone()" style="flex:1;text-align:center;color:var(--muted)">☐ None</button>
+      </div>
+      <button class="btn" onclick="copySelectedTeacherEmails()" style="width:100%;text-align:center;color:var(--accent)">✉ Copy Selected Emails (Outlook)</button>
+      <button class="btn" onclick="copyRosterEmails()" style="width:100%;text-align:center;color:var(--muted);margin-top:8px">✉ Copy All Filtered Emails</button>
+      <button class="btn" onclick="exportRosterCSV()" style="width:100%;text-align:center;color:var(--muted);margin-top:8px">⬇ Export Filtered CSV</button>
     </div>
   </aside>
 
@@ -1916,7 +1921,7 @@ window.addEventListener('DOMContentLoaded', init);
   <div class="roster-main">
     <div class="roster-topbar">
       <h2>AdvanceKentucky Science Teachers <span style="color:var(--muted);font-weight:400;font-size:0.8rem">2026–27</span></h2>
-      <input type="text" class="roster-search" id="roster-search" placeholder="Search name, school, district…" oninput="renderRosterTable()">
+      <input type="text" class="roster-search" id="roster-search" placeholder="Search name, school, district…" oninput="clearTeacherSelection();renderRosterTable()">
       <button onclick="openTeacherModal()" style="background:var(--accent);border:none;color:#fff;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:0.82rem;font-weight:600;white-space:nowrap">+ Add Teacher</button>
       <div class="view-toggle">
         <button class="view-toggle-btn active" id="roster-list-btn" onclick="rosterSetView('list')">☰ List</button>
@@ -2135,6 +2140,7 @@ const rosterState = {
   selectedId: null,
   view: 'list',
   mapLoaded: false,
+  checked: new Set(),   // teacher ids checked for bulk actions
 };
 
 function getTeacherData(id) {
@@ -2362,7 +2368,7 @@ function renderRosterTable() {
     };
 
     return `<tr class="${isSelected ? 'selected-row' : ''}${t.program === 'GUK' ? ' guk-row' : ''}">
-      <td class="frozen frozen-last"><span class="teacher-name-link" onclick="selectTeacher('${t.id}')">${t.lastName}, ${t.firstName}</span></td>
+      <td class="frozen frozen-last"><span style="display:inline-flex;align-items:center;gap:6px"><input type="checkbox" class="sel-cb" ${rosterState.checked.has(t.id)?'checked':''} onclick="event.stopPropagation();toggleTeacherChecked('${t.id}',this.checked)" style="width:14px;height:14px;accent-color:var(--accent);cursor:pointer;flex-shrink:0" title="Select for bulk actions"><span class="teacher-name-link" onclick="selectTeacher('${t.id}')">${t.lastName}, ${t.firstName}</span></span></td>
       <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis">${t.school}</td>
       <td style="font-size:0.72rem;color:var(--muted);max-width:180px;overflow:hidden;text-overflow:ellipsis">${data.schoolAddress || SCHOOL_ADDRESSES[t.school] || '<span style="color:var(--muted);font-style:italic">—</span>'}</td>
       <td style="font-size:0.72rem;color:var(--muted);max-width:130px;overflow:hidden;text-overflow:ellipsis">${t.district}</td>
@@ -2391,6 +2397,7 @@ function renderRosterTable() {
 
   // Apply sticky left offsets to frozen columns after render
   applyFrozenOffsets();
+  updateTeacherActionUI();
 }
 
 function applyFrozenOffsets() {
@@ -2544,6 +2551,7 @@ document.addEventListener('DOMContentLoaded', () => applyColVisibility());
 
 function rosterFilter(type, val) {
   rosterState.filters[type] = val;
+  clearTeacherSelection();
   // Update button states
   const btnGroupMap = { course: 'roster-course-btns', crpYear: 'roster-year-btns', status: 'roster-status-btns', program: 'roster-prog-btns', mentor: 'roster-mentor-btns' };
   const groupId = btnGroupMap[type];
@@ -2983,6 +2991,36 @@ function copyRosterEmails() {
   copyEmailList(getFilteredTeachers().map(t => t.teacherEmail), 'teacher');
 }
 
+// ─── BULK SELECTION: TEACHERS ────────────────────────────────────────
+function toggleTeacherChecked(id, on) {
+  if (on) rosterState.checked.add(id); else rosterState.checked.delete(id);
+  updateTeacherActionUI();
+}
+function teacherSelectAll() {
+  getFilteredTeachers().forEach(t => rosterState.checked.add(t.id));
+  renderRosterTable();
+  updateTeacherActionUI();
+}
+function teacherSelectNone() {
+  rosterState.checked.clear();
+  renderRosterTable();
+  updateTeacherActionUI();
+}
+function clearTeacherSelection() {
+  if (rosterState.checked.size) rosterState.checked.clear();
+}
+function updateTeacherActionUI() {
+  const el = document.getElementById('roster-sel-count');
+  if (el) el.textContent = rosterState.checked.size;
+}
+function copySelectedTeacherEmails() {
+  if (rosterState.checked.size === 0) { alert('No teachers selected. Tick the boxes next to the names first.'); return; }
+  // Only those still visible under the current filter
+  const visible = new Set(getFilteredTeachers().map(t => t.id));
+  const emails = TEACHERS.filter(t => rosterState.checked.has(t.id) && visible.has(t.id)).map(t => t.teacherEmail);
+  copyEmailList(emails, 'teacher');
+}
+
 </script>
 
 <!-- ─── CONSULTANT VIEW ─── -->
@@ -3018,9 +3056,14 @@ function copyRosterEmails() {
       </div>
     </div>
     <div class="hm-control" style="flex:1">
-      <h3>Export</h3>
-      <button class="btn" onclick="exportConsultantCSV()" style="width:100%;text-align:center;color:var(--accent)">⬇ Export Filtered CSV</button>
-      <button class="btn" onclick="copyConsultantEmails()" style="width:100%;text-align:center;color:var(--accent);margin-top:8px">✉ Copy Emails (Outlook)</button>
+      <h3>Actions <span style="color:var(--muted);font-weight:400;font-size:0.72rem">(<span id="cons-sel-count">0</span> selected)</span></h3>
+      <div style="display:flex;gap:6px;margin-bottom:8px">
+        <button class="btn" onclick="consSelectAll()" style="flex:1;text-align:center;color:var(--accent)">☑ All</button>
+        <button class="btn" onclick="consSelectNone()" style="flex:1;text-align:center;color:var(--muted)">☐ None</button>
+      </div>
+      <button class="btn" onclick="copySelectedConsultantEmails()" style="width:100%;text-align:center;color:var(--accent)">✉ Copy Selected Emails (Outlook)</button>
+      <button class="btn" onclick="copyConsultantEmails()" style="width:100%;text-align:center;color:var(--muted);margin-top:8px">✉ Copy All Filtered Emails</button>
+      <button class="btn" onclick="exportConsultantCSV()" style="width:100%;text-align:center;color:var(--muted);margin-top:8px">⬇ Export Filtered CSV</button>
     </div>
   </aside>
 
@@ -3028,7 +3071,7 @@ function copyRosterEmails() {
   <div class="cons-main">
     <div class="cons-topbar">
       <h2>AdvanceKentucky Science Consultants <span style="color:var(--muted);font-weight:400;font-size:0.8rem">2025–26</span></h2>
-      <input type="text" class="cons-search" id="cons-search" placeholder="Search name, subject, location…" oninput="renderConsultantTable()">
+      <input type="text" class="cons-search" id="cons-search" placeholder="Search name, subject, location…" oninput="clearConsSelection();renderConsultantTable()">
       <button onclick="openConsModal()" style="background:var(--accent);border:none;color:#fff;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:0.82rem;font-weight:600;white-space:nowrap">+ Add Consultant</button>
       <div class="col-picker-wrap" id="cons-col-picker-wrap">
         <button class="col-picker-btn" id="cons-col-picker-btn" onclick="toggleConsColPicker()">
@@ -3389,7 +3432,8 @@ const consState = {
   filters: { subj: 'all', contract: 'all', role: 'all' },
   sortKey: 'lastName',
   sortDir: 1,
-  selectedId: null
+  selectedId: null,
+  checked: new Set()   // consultant ids checked for bulk actions
 };
 
 function getConsultantData(id) {
@@ -3438,6 +3482,7 @@ function getFilteredConsultants() {
 
 function consFilter(type, val) {
   consState.filters[type] = val;
+  clearConsSelection();
   document.querySelectorAll(`#cons-${type}-btns .btn`).forEach(b => {
     b.classList.toggle('active', b.dataset.val === val);
   });
@@ -3469,6 +3514,7 @@ function renderConsultantTable() {
     return `<tr class="${isSelected ? 'selected-row' : ''}">
       <td class="frozen frozen-last editable" onclick="selectConsultant('${c.id}')">
         <div class="cons-name-cell" style="flex-direction:row;align-items:center;gap:4px">
+          <input type="checkbox" class="sel-cb" ${consState.checked.has(c.id)?'checked':''} onclick="event.stopPropagation();toggleConsChecked('${c.id}',this.checked)" style="width:14px;height:14px;accent-color:var(--accent);cursor:pointer;flex-shrink:0" title="Select for bulk actions">
           <input style="flex:1.2;min-width:0" value="${(c.lastName||'').replace(/"/g,'&quot;')}" placeholder="Last" onchange="consInlineEdit('${c.id}','lastName',this.value)" onclick="event.stopPropagation()" title="Last name">
           <input style="flex:1;min-width:0" value="${(c.firstName||'').replace(/"/g,'&quot;')}" placeholder="First" onchange="consInlineEdit('${c.id}','firstName',this.value)" onclick="event.stopPropagation()" title="First name">
           <button class="cons-info-btn" onclick="event.stopPropagation();selectConsultant('${c.id}')" title="View full details">ℹ</button>
@@ -3505,6 +3551,7 @@ function renderConsultantTable() {
 
   applyConsFrozenOffsets();
   initConsColumnResize();
+  updateConsActionUI();
 }
 
 // Recompute sticky-left offsets for frozen columns (call after any width change)
@@ -4034,6 +4081,35 @@ function exportConsultantCSV() {
 }
 function copyConsultantEmails() {
   copyEmailList(getFilteredConsultants().map(c => c.email), 'consultant');
+}
+
+// ─── BULK SELECTION: CONSULTANTS ─────────────────────────────────────
+function toggleConsChecked(id, on) {
+  if (on) consState.checked.add(id); else consState.checked.delete(id);
+  updateConsActionUI();
+}
+function consSelectAll() {
+  getFilteredConsultants().forEach(c => consState.checked.add(c.id));
+  renderConsultantTable();
+  updateConsActionUI();
+}
+function consSelectNone() {
+  consState.checked.clear();
+  renderConsultantTable();
+  updateConsActionUI();
+}
+function clearConsSelection() {
+  if (consState.checked.size) consState.checked.clear();
+}
+function updateConsActionUI() {
+  const el = document.getElementById('cons-sel-count');
+  if (el) el.textContent = consState.checked.size;
+}
+function copySelectedConsultantEmails() {
+  if (consState.checked.size === 0) { alert('No consultants selected. Tick the boxes next to the names first.'); return; }
+  const visible = new Set(getFilteredConsultants().map(c => c.id));
+  const emails = CONSULTANTS.filter(c => consState.checked.has(c.id) && visible.has(c.id)).map(c => c.email);
+  copyEmailList(emails, 'consultant');
 }
 
 // ════════════════════════════════════════════════════════════════════
