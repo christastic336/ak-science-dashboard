@@ -23,6 +23,34 @@
   --ap-color: #4f8ef7;
   --dc-color: #a78bfa;
 }
+[data-theme="light"] {
+  --bg: #f0f2f7;
+  --surface: #ffffff;
+  --surface2: #e8ecf4;
+  --border: #c8d0e0;
+  --accent: #2563eb;
+  --accent2: #7c3aed;
+  --green: #059669;
+  --yellow: #d97706;
+  --red: #dc2626;
+  --text: #1e2537;
+  --muted: #6b7280;
+  --ap-color: #2563eb;
+  --dc-color: #7c3aed;
+}
+/* Theme toggle button */
+#theme-toggle {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 5px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+  transition: border-color 0.15s;
+}
+#theme-toggle:hover { border-color: var(--accent); }
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; min-height: 100vh; }
 
@@ -572,6 +600,7 @@ select:focus { outline: none; border-color: var(--accent); }
 <header>
   <h1>Kentucky <span>Advanced Courses</span> Dashboard</h1>
   <div class="header-controls">
+    <button id="theme-toggle" title="Toggle dark/light mode">☀️</button>
     <span class="badge" id="year-badge">2024–25</span>
     <span class="badge">AP + Dual Credit</span>
     <span class="badge">Public Data</span>
@@ -5544,6 +5573,30 @@ async function initCoverageMap() {
     missingHtml;
 }
 
+// ─── DARK / LIGHT MODE TOGGLE ───
+(function() {
+  const root = document.documentElement;
+  const btn = document.getElementById('theme-toggle');
+  const saved = localStorage.getItem('kystc-theme');
+  if (saved === 'light') {
+    root.setAttribute('data-theme', 'light');
+    btn.textContent = '🌙';
+  } else {
+    btn.textContent = '☀️';
+  }
+  btn.addEventListener('click', () => {
+    const isLight = root.getAttribute('data-theme') === 'light';
+    if (isLight) {
+      root.removeAttribute('data-theme');
+      btn.textContent = '☀️';
+      localStorage.setItem('kystc-theme', 'dark');
+    } else {
+      root.setAttribute('data-theme', 'light');
+      btn.textContent = '🌙';
+      localStorage.setItem('kystc-theme', 'light');
+    }
+  });
+})();
 </script>
 
 </body>
