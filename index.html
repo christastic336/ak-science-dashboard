@@ -393,6 +393,8 @@ select:focus { outline: none; border-color: var(--accent); }
 .cons-table td { padding: 7px 10px; border-bottom: 1px solid var(--border); border-right: 1px solid rgba(46,52,80,0.5); color: var(--text); vertical-align: middle; overflow: hidden; max-width: 0; }
 .cons-table tr:hover td { background: var(--surface2); }
 .cons-table tr.selected-row td { background: rgba(79,142,247,0.08); }
+.cons-table tr.out-of-state td { background: rgba(156,163,175,0.08); }
+.cons-table tr.out-of-state:hover td { background: var(--surface2); }
 .cons-table td.frozen-last, .cons-table th.frozen-last { border-right: 2px solid var(--accent) !important; }
 .cons-table thead tr.group-row th { font-size: 0.65rem; text-align: center; padding: 4px 6px; border-bottom: 1px solid var(--border); letter-spacing: 0.1em; }
 .cons-table td.editable { padding: 0 !important; overflow: hidden; }
@@ -3590,7 +3592,8 @@ function renderConsultantTable() {
     }</select>`;
     const numInput = (val, field) => `<input type="number" min="0" class="cons-cell-number" value="${val??''}" placeholder="—" onchange="consInlineEdit('${c.id}','${field}',this.value===''?null:Number(this.value))">`;
 
-    return `<tr class="${isSelected ? 'selected-row' : ''}">
+    const isOutOfState = c.address2 && !/\bKY\b/.test(c.address2);
+    return `<tr class="${isSelected ? 'selected-row' : ''}${isOutOfState ? ' out-of-state' : ''}">
       <td class="frozen frozen-last editable" onclick="selectConsultant('${c.id}')">
         <div class="cons-name-cell" style="flex-direction:row;align-items:center;gap:4px">
           <input type="checkbox" class="sel-cb" ${consState.checked.has(c.id)?'checked':''} onclick="event.stopPropagation();toggleConsChecked('${c.id}',this.checked)" style="width:14px;height:14px;accent-color:var(--accent);cursor:pointer;flex-shrink:0" title="Select for bulk actions">
