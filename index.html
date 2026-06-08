@@ -1991,9 +1991,13 @@ window.addEventListener('DOMContentLoaded', init);
           <div class="col-picker-item" onclick="colPickerToggle(20,this)"><input type="checkbox" checked> Supp. Requested</div>
           <div class="col-picker-item" onclick="colPickerToggle(21,this)"><input type="checkbox" checked> Exam Prep</div>
           <div class="col-picker-divider"></div>
+          <div class="col-picker-group">Mentoring</div>
+          <div class="col-picker-item" onclick="colPickerToggle(22,this)"><input type="checkbox" checked> Mentor Req.</div>
+          <div class="col-picker-item" onclick="colPickerToggle(23,this)"><input type="checkbox" checked> Assigned Mentor</div>
+          <div class="col-picker-divider"></div>
           <div class="col-picker-group">Meta</div>
-          <div class="col-picker-item" onclick="colPickerToggle(22,this)"><input type="checkbox" checked> Progress</div>
-          <div class="col-picker-item" onclick="colPickerToggle(23,this)"><input type="checkbox" checked> Program</div>
+          <div class="col-picker-item" onclick="colPickerToggle(24,this)"><input type="checkbox" checked> Progress</div>
+          <div class="col-picker-item" onclick="colPickerToggle(25,this)"><input type="checkbox" checked> Program</div>
           <div class="col-picker-divider"></div>
           <button class="col-picker-reset" onclick="colPickerReset()">↺ Show all columns</button>
         </div>
@@ -2013,6 +2017,7 @@ window.addEventListener('DOMContentLoaded', init);
                 <th colspan="6" class="col-group-identity" style="background:var(--surface)!important;color:var(--muted)!important">Info</th>
                 <th colspan="5" class="col-group-events">📅 Events w/ Date</th>
                 <th colspan="10" class="col-group-checkboxes">✓ Checkboxes</th>
+                <th colspan="2" class="col-group-meta" style="background:rgba(251,191,36,0.1);color:var(--yellow)">Mentoring</th>
                 <th colspan="2" class="col-group-meta">Meta</th>
               </tr>
               <!-- Column header row -->
@@ -2039,6 +2044,8 @@ window.addEventListener('DOMContentLoaded', init);
                 <th>Mock Exam</th>
                 <th>Supp. Requested</th>
                 <th>Exam Prep</th>
+                <th style="text-align:center">Mentor Req.</th>
+                <th>Assigned Mentor</th>
                 <th>Progress</th>
                 <th>Program</th>
               </tr>
@@ -2419,6 +2426,15 @@ function renderRosterTable() {
       ${cb('mockExam')}
       ${cb('supplementalContent')}
       ${cb('examPrep')}
+      <td style="text-align:center" onclick="event.stopPropagation()">
+        <input type="checkbox" ${t.mentorRequested === 'Yes' ? 'checked' : ''} onchange="inlineMentorReqToggle('${t.id}',this.checked)" style="width:15px;height:15px;accent-color:var(--yellow);cursor:pointer" title="Mentor Requested">
+      </td>
+      <td onclick="event.stopPropagation()" style="min-width:140px">
+        <select class="mentor-assign-select" onchange="inlineMentorAssign('${t.id}',this.value)" style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:5px;padding:3px 5px;font-size:0.75rem;cursor:pointer">
+          <option value="">— Unassigned —</option>
+          ${getMentorOptions().map(c => `<option value="${c.id}" ${data.assignedMentor===c.id?'selected':''}>${c.lastName}, ${c.firstName}</option>`).join('')}
+        </select>
+      </td>
       <td style="min-width:100px"><div class="event-progress"><div class="event-bar"><div class="event-bar-fill" style="width:${pct}%"></div></div><span class="event-pct">${prog.checked}/${prog.total}</span></div></td>
       <td><span class="prog-chip">${t.program}</span></td>
     </tr>`;
@@ -2427,6 +2443,30 @@ function renderRosterTable() {
   // Apply sticky left offsets to frozen columns after render
   applyFrozenOffsets();
   updateTeacherActionUI();
+}
+
+// Returns consultants with isMentor === true, sorted by last name
+function getMentorOptions() {
+  return CONSULTANTS.filter(c => c.isMentor).sort((a,b) => (a.lastName||'').localeCompare(b.lastName||''));
+}
+
+// Inline toggle for Mentor Requested checkbox on a teacher row
+function inlineMentorReqToggle(id, checked) {
+  const t = TEACHERS.find(x => x.id === id);
+  if (!t) return;
+  t.mentorRequested = checked ? 'Yes' : '';
+  // Sync to Sheets if connected
+  if (typeof debouncedWrite === 'function' && typeof _gsiAccessToken !== 'undefined' && _gsiAccessToken) {
+    debouncedWrite('teacherRow_' + id, () => syncTeacherRow(id), 1000);
+  }
+}
+
+// Inline assign mentor dropdown handler
+function inlineMentorAssign(id, consultantId) {
+  const data = getTeacherData(id);
+  data.assignedMentor = consultantId || null;
+  saveTeacherData(id, data);
+  if (rosterState.selectedId === id) renderTeacherPanel(id);
 }
 
 function applyFrozenOffsets() {
@@ -2491,7 +2531,7 @@ function flashSave(id) {
 // ═══════════════════════════════════════════════════
 // COLUMN PICKER
 // ═══════════════════════════════════════════════════
-const COL_STORAGE_KEY = 'akHiddenCols_v2'; // v2: col indices shifted after adding School Address + unfreezing
+const COL_STORAGE_KEY = 'akHiddenCols_v3'; // v3: added Mentor Req. + Assigned Mentor cols (22,23), Progress/Program shifted to 24,25
 
 function getHiddenCols() {
   try { return new Set(JSON.parse(localStorage.getItem(COL_STORAGE_KEY)) || []); }
@@ -3123,13 +3163,14 @@ function copySelectedTeacherEmails() {
           <div class="col-picker-item" onclick="consColToggle(8,this)"><input type="checkbox" checked> Master Series</div>
           <div class="col-picker-item" onclick="consColToggle(9,this)"><input type="checkbox" checked> MS Mod</div>
           <div class="col-picker-item" onclick="consColToggle(10,this)"><input type="checkbox" checked> Mentor Blocks</div>
-          <div class="col-picker-item" onclick="consColToggle(11,this)"><input type="checkbox" checked> Mock Leader</div>
-          <div class="col-picker-item" onclick="consColToggle(12,this)"><input type="checkbox" checked> Programming</div>
+          <div class="col-picker-item" onclick="consColToggle(11,this)"><input type="checkbox" checked> Mentor</div>
+          <div class="col-picker-item" onclick="consColToggle(12,this)"><input type="checkbox" checked> Mock Leader</div>
+          <div class="col-picker-item" onclick="consColToggle(13,this)"><input type="checkbox" checked> Programming</div>
           <div class="col-picker-divider"></div>
           <div class="col-picker-group">Contract Details</div>
-          <div class="col-picker-item" onclick="consColToggle(13,this)"><input type="checkbox" checked> Stipend</div>
-          <div class="col-picker-item" onclick="consColToggle(14,this)"><input type="checkbox" checked> Travel Allow.</div>
-          <div class="col-picker-item" onclick="consColToggle(15,this)"><input type="checkbox" checked> Notes</div>
+          <div class="col-picker-item" onclick="consColToggle(14,this)"><input type="checkbox" checked> Stipend</div>
+          <div class="col-picker-item" onclick="consColToggle(15,this)"><input type="checkbox" checked> Travel Allow.</div>
+          <div class="col-picker-item" onclick="consColToggle(16,this)"><input type="checkbox" checked> Notes</div>
           <div class="col-picker-divider"></div>
           <button class="col-picker-reset" onclick="consColPickerReset()">↺ Show all columns</button>
         </div>
@@ -3150,7 +3191,8 @@ function copySelectedTeacherEmails() {
             <col style="width:82px"><!-- FF/SS -->
             <col style="width:95px"><!-- Master Series -->
             <col style="width:82px"><!-- MS Mod -->
-            <col style="width:82px"><!-- Mentor -->
+            <col style="width:82px"><!-- Mentor Blocks -->
+            <col style="width:65px"><!-- Mentor -->
             <col style="width:72px"><!-- Mock -->
             <col style="width:92px"><!-- Programming -->
             <col style="width:82px"><!-- Stipend -->
@@ -3162,7 +3204,7 @@ function copySelectedTeacherEmails() {
               <th colspan="1" class="frozen col-group-identity">Identity</th>
               <th colspan="3" class="col-group-identity" style="background:var(--surface)!important;color:var(--muted)!important">Info</th>
               <th colspan="2" class="col-group-events" style="background:rgba(167,139,250,0.1);color:#a78bfa">Subjects</th>
-              <th colspan="7" class="col-group-checkboxes" style="background:rgba(52,211,153,0.08);color:var(--green)">✓ Engagement</th>
+              <th colspan="8" class="col-group-checkboxes" style="background:rgba(52,211,153,0.08);color:var(--green)">✓ Engagement</th>
               <th colspan="3" class="col-group-meta">Contract Details</th>
             </tr>
             <tr>
@@ -3177,6 +3219,7 @@ function copySelectedTeacherEmails() {
               <th onclick="consSort('masterSeries')">Master Series</th>
               <th onclick="consSort('msMod')">MS Mod</th>
               <th onclick="consSort('mentorBlocks')">Mentor Blocks</th>
+              <th style="text-align:center">Mentor</th>
               <th onclick="consSort('mockExamLeader')">Mock Leader</th>
               <th onclick="consSort('programming')">Programming</th>
               <th onclick="consSort('stipend')">Stipend</th>
@@ -3567,6 +3610,9 @@ function renderConsultantTable() {
       <td class="editable">${numInput(c.masterSeries,'masterSeries')}</td>
       <td class="editable">${numInput(c.msMod,'msMod')}</td>
       <td class="editable">${numInput(c.mentorBlocks,'mentorBlocks')}</td>
+      <td style="text-align:center">
+        <input type="checkbox" ${c.isMentor ? 'checked' : ''} onchange="consInlineEdit('${c.id}','isMentor',this.checked||null);renderRosterTable()" style="width:15px;height:15px;accent-color:var(--accent);cursor:pointer" title="Available as mentor">
+      </td>
       <td style="text-align:center">
         <input type="checkbox" ${isMockYes ? 'checked' : ''} onchange="consInlineEdit('${c.id}','mockExamLeader',this.checked?'Y':null)" style="width:15px;height:15px;accent-color:var(--green);cursor:pointer">
       </td>
@@ -4009,7 +4055,7 @@ function deleteConsultant(id) {
 })();
 
 // ─── CONSULTANT COLUMN PICKER ───
-const CONS_COL_STORAGE = 'akConsHiddenCols_v2'; // v2: added Email col (index 2), shifted all subsequent indices
+const CONS_COL_STORAGE = 'akConsHiddenCols_v3'; // v3: added Mentor col (index 11), shifted Mock Leader+ up by 1
 
 function getConsHiddenCols() {
   try { return new Set(JSON.parse(localStorage.getItem(CONS_COL_STORAGE)) || []); }
@@ -4722,7 +4768,7 @@ function normalizeSheetHeader(h) {
 
 // ─── COLUMN MAPS ────────────────────────────────────────────────────
 const TEACHER_COLS = ['id','lastName','firstName','school','district','course','crpYear','program','confirmed','status','firstDayNotes','mentorRequested','teacherEmail','principalEmail'];
-const CONSULTANT_COLS = ['id','lastName','firstName','subj1','subj2','address1','address2','homePhone','cellPhone','email','contract','launchDayBlocks','ffssBlocks','masterSeries','msMod','stipend','travelAllowance','mentorBlocks','mockExamLeader','programming'];
+const CONSULTANT_COLS = ['id','lastName','firstName','subj1','subj2','address1','address2','homePhone','cellPhone','email','contract','launchDayBlocks','ffssBlocks','masterSeries','msMod','stipend','travelAllowance','mentorBlocks','isMentor','mockExamLeader','programming'];
 // Last Sheet column letter for the Consultants tab, derived from column count so
 // adding/removing fields never desyncs the A1 range (1->A, 18->R, 19->S, …).
 function colLetter(n) { let s = ''; while (n > 0) { const m = (n - 1) % 26; s = String.fromCharCode(65 + m) + s; n = Math.floor((n - 1) / 26); } return s; }
