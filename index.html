@@ -3112,23 +3112,24 @@ function copySelectedTeacherEmails() {
           <div class="col-picker-divider"></div>
           <div class="col-picker-group">Info</div>
           <div class="col-picker-item" onclick="consColToggle(1,this)"><input type="checkbox" checked> Address</div>
-          <div class="col-picker-item" onclick="consColToggle(2,this)"><input type="checkbox" checked> Contract</div>
-          <div class="col-picker-item" onclick="consColToggle(3,this)"><input type="checkbox" checked> Subj 1</div>
-          <div class="col-picker-item" onclick="consColToggle(4,this)"><input type="checkbox" checked> Subj 2</div>
+          <div class="col-picker-item" onclick="consColToggle(2,this)"><input type="checkbox" checked> Email</div>
+          <div class="col-picker-item" onclick="consColToggle(3,this)"><input type="checkbox" checked> Contract</div>
+          <div class="col-picker-item" onclick="consColToggle(4,this)"><input type="checkbox" checked> Subj 1</div>
+          <div class="col-picker-item" onclick="consColToggle(5,this)"><input type="checkbox" checked> Subj 2</div>
           <div class="col-picker-divider"></div>
           <div class="col-picker-group">Engagement</div>
-          <div class="col-picker-item" onclick="consColToggle(5,this)"><input type="checkbox" checked> Launch Day</div>
-          <div class="col-picker-item" onclick="consColToggle(6,this)"><input type="checkbox" checked> FF/SS Blocks</div>
-          <div class="col-picker-item" onclick="consColToggle(7,this)"><input type="checkbox" checked> Master Series</div>
-          <div class="col-picker-item" onclick="consColToggle(8,this)"><input type="checkbox" checked> MS Mod</div>
-          <div class="col-picker-item" onclick="consColToggle(9,this)"><input type="checkbox" checked> Mentor Blocks</div>
-          <div class="col-picker-item" onclick="consColToggle(10,this)"><input type="checkbox" checked> Mock Leader</div>
-          <div class="col-picker-item" onclick="consColToggle(11,this)"><input type="checkbox" checked> Programming</div>
+          <div class="col-picker-item" onclick="consColToggle(6,this)"><input type="checkbox" checked> Launch Day</div>
+          <div class="col-picker-item" onclick="consColToggle(7,this)"><input type="checkbox" checked> FF/SS Blocks</div>
+          <div class="col-picker-item" onclick="consColToggle(8,this)"><input type="checkbox" checked> Master Series</div>
+          <div class="col-picker-item" onclick="consColToggle(9,this)"><input type="checkbox" checked> MS Mod</div>
+          <div class="col-picker-item" onclick="consColToggle(10,this)"><input type="checkbox" checked> Mentor Blocks</div>
+          <div class="col-picker-item" onclick="consColToggle(11,this)"><input type="checkbox" checked> Mock Leader</div>
+          <div class="col-picker-item" onclick="consColToggle(12,this)"><input type="checkbox" checked> Programming</div>
           <div class="col-picker-divider"></div>
           <div class="col-picker-group">Contract Details</div>
-          <div class="col-picker-item" onclick="consColToggle(12,this)"><input type="checkbox" checked> Stipend</div>
-          <div class="col-picker-item" onclick="consColToggle(13,this)"><input type="checkbox" checked> Travel Allow.</div>
-          <div class="col-picker-item" onclick="consColToggle(14,this)"><input type="checkbox" checked> Notes</div>
+          <div class="col-picker-item" onclick="consColToggle(13,this)"><input type="checkbox" checked> Stipend</div>
+          <div class="col-picker-item" onclick="consColToggle(14,this)"><input type="checkbox" checked> Travel Allow.</div>
+          <div class="col-picker-item" onclick="consColToggle(15,this)"><input type="checkbox" checked> Notes</div>
           <div class="col-picker-divider"></div>
           <button class="col-picker-reset" onclick="consColPickerReset()">↺ Show all columns</button>
         </div>
@@ -4008,7 +4009,7 @@ function deleteConsultant(id) {
 })();
 
 // ─── CONSULTANT COLUMN PICKER ───
-const CONS_COL_STORAGE = 'akConsHiddenCols';
+const CONS_COL_STORAGE = 'akConsHiddenCols_v2'; // v2: added Email col (index 2), shifted all subsequent indices
 
 function getConsHiddenCols() {
   try { return new Set(JSON.parse(localStorage.getItem(CONS_COL_STORAGE)) || []); }
@@ -4028,10 +4029,11 @@ function applyConsColVisibility() {
   const count = hidden.size;
   const badge = document.getElementById('cons-col-hidden-count');
   if (badge) { badge.textContent = count; badge.style.display = count > 0 ? 'inline' : 'none'; }
-  // sync checkboxes
-  document.querySelectorAll('#cons-col-picker-dropdown .col-picker-item:not(.frozen-col)').forEach((item, i) => {
+  // sync checkboxes — read actual colIdx from onclick attr, not sequential position
+  document.querySelectorAll('#cons-col-picker-dropdown .col-picker-item:not(.frozen-col)').forEach(item => {
     const cb = item.querySelector('input[type=checkbox]');
-    if (cb) cb.checked = !hidden.has(i + 1);
+    const match = item.getAttribute('onclick') && item.getAttribute('onclick').match(/consColToggle\((\d+)/);
+    if (match && cb) cb.checked = !hidden.has(parseInt(match[1]));
   });
 }
 
