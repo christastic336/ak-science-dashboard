@@ -1880,6 +1880,9 @@ window.addEventListener('DOMContentLoaded', init);
     <button class="btn active" id="cm-filter-all" onclick="cmSetFilter('all')">All</button>
     <button class="btn" id="cm-filter-mentor" onclick="cmSetFilter('mentor')">⭐ Mentor View</button>
     <span style="font-size:0.75rem;color:var(--muted);margin-left:8px" id="cm-filter-desc">All teachers, consultants, and mentors</span>
+    <span style="flex:1"></span>
+    <button class="btn" onclick="if(window._cmResetZoom) window._cmResetZoom()" title="Reset zoom and pan" style="font-size:0.75rem;padding:3px 10px">⌖ Reset View</button>
+    <span style="font-size:0.72rem;color:var(--muted);margin-left:2px">Scroll to zoom · Drag to pan</span>
   </div>
   <div style="flex:1;position:relative;overflow:hidden" id="cm-map-container">
     <svg id="cm-svg" style="width:100%;height:100%"></svg>
@@ -2037,25 +2040,25 @@ window.addEventListener('DOMContentLoaded', init);
                 <th onclick="rosterSort('course')">Course</th>
                 <th onclick="rosterSort('crpYear')">Yr</th>
                 <th onclick="rosterSort('status')">Status</th>
-                <th>Fall Site Visit</th>
-                <th>Supp. Content</th>
-                <th>Vertical Team 1</th>
-                <th>Vertical Team 2</th>
-                <th>Spring Site Visit</th>
-                <th>Summer Training</th>
-                <th>Launch Day</th>
-                <th>Tchr Inventory</th>
-                <th>Fall Forum</th>
-                <th>MiniMock #1</th>
-                <th>MiniMock #2</th>
-                <th>Reg. Mock</th>
-                <th>Mock Exam</th>
-                <th>Supp. Requested</th>
-                <th>Exam Prep</th>
-                <th style="text-align:center">Mentor Req.</th>
-                <th>Assigned Mentor</th>
-                <th>Progress</th>
-                <th>Program</th>
+                <th onclick="rosterSort('fallSiteVisit')">Fall Site Visit</th>
+                <th onclick="rosterSort('supplementalVisit')">Supp. Content</th>
+                <th onclick="rosterSort('verticalTeam1')">Vertical Team 1</th>
+                <th onclick="rosterSort('verticalTeam2')">Vertical Team 2</th>
+                <th onclick="rosterSort('springSiteVisit')">Spring Site Visit</th>
+                <th onclick="rosterSort('summerTraining')">Summer Training</th>
+                <th onclick="rosterSort('launchDay')">Launch Day</th>
+                <th onclick="rosterSort('teacherInventory')">Tchr Inventory</th>
+                <th onclick="rosterSort('fallForum')">Fall Forum</th>
+                <th onclick="rosterSort('miniMock1')">MiniMock #1</th>
+                <th onclick="rosterSort('miniMock2')">MiniMock #2</th>
+                <th onclick="rosterSort('registeredMock')">Reg. Mock</th>
+                <th onclick="rosterSort('mockExam')">Mock Exam</th>
+                <th onclick="rosterSort('supplementalContent')">Supp. Requested</th>
+                <th onclick="rosterSort('examPrep')">Exam Prep</th>
+                <th onclick="rosterSort('mentorRequested')" style="text-align:center">Mentor Req.</th>
+                <th onclick="rosterSort('assignedMentor')">Assigned Mentor</th>
+                <th onclick="rosterSort('progress')">Progress</th>
+                <th onclick="rosterSort('program')">Program</th>
               </tr>
             </thead>
             <tbody id="roster-tbody"></tbody>
@@ -2365,13 +2368,39 @@ function getFilteredTeachers() {
   }).sort((a, b) => {
     const col = rosterState.sort.col;
     let va, vb;
-    if (col === 'name') { va = a.lastName; vb = b.lastName; }
-    else if (col === 'school') { va = a.school; vb = b.school; }
-    else if (col === 'district') { va = a.district; vb = b.district; }
-    else if (col === 'course') { va = a.course; vb = b.course; }
-    else if (col === 'crpYear') { va = +a.crpYear; vb = +b.crpYear; }
-    else if (col === 'status') { va = a.status; vb = b.status; }
-    else { va = a.lastName; vb = b.lastName; }
+    // Fields directly on the teacher object
+    if (col === 'name')             { va = a.lastName;         vb = b.lastName; }
+    else if (col === 'school')      { va = a.school;           vb = b.school; }
+    else if (col === 'schoolAddress') { va = SCHOOL_ADDRESSES[a.school]||''; vb = SCHOOL_ADDRESSES[b.school]||''; }
+    else if (col === 'district')    { va = a.district;         vb = b.district; }
+    else if (col === 'course')      { va = a.course;           vb = b.course; }
+    else if (col === 'crpYear')     { va = +a.crpYear;         vb = +b.crpYear; }
+    else if (col === 'status')      { va = a.status;           vb = b.status; }
+    else if (col === 'program')     { va = a.program;          vb = b.program; }
+    else if (col === 'mentorRequested') { va = a.mentorRequested === 'Yes' ? 0 : 1; vb = b.mentorRequested === 'Yes' ? 0 : 1; }
+    // Fields in teacher localStorage data
+    else if (col === 'assignedMentor') {
+      const ca = CONSULTANTS.find(c => c.id === getTeacherData(a.id).assignedMentor);
+      const cb = CONSULTANTS.find(c => c.id === getTeacherData(b.id).assignedMentor);
+      va = ca ? ca.lastName : '￿';
+      vb = cb ? cb.lastName : '￿';
+    }
+    else if (col === 'progress') {
+      va = getEventProgress(a.id).checked / (getEventProgress(a.id).total || 1);
+      vb = getEventProgress(b.id).checked / (getEventProgress(b.id).total || 1);
+    }
+    // Event checkbox/date columns — sort checked before unchecked
+    else {
+      const eventKeys = ['fallSiteVisit','supplementalVisit','verticalTeam1','verticalTeam2',
+        'springSiteVisit','summerTraining','launchDay','teacherInventory','fallForum',
+        'miniMock1','miniMock2','registeredMock','mockExam','supplementalContent','examPrep'];
+      if (eventKeys.includes(col)) {
+        va = getTeacherData(a.id).events[col + '_done'] ? 0 : 1;
+        vb = getTeacherData(b.id).events[col + '_done'] ? 0 : 1;
+      } else {
+        va = a.lastName; vb = b.lastName;
+      }
+    }
     if (va < vb) return -rosterState.sort.dir;
     if (va > vb) return rosterState.sort.dir;
     return 0;
@@ -5376,7 +5405,21 @@ async function initCoverageMap() {
 
   const svg = d3.select('#cm-svg')
     .attr('viewBox', `0 0 ${W} ${H}`)
-    .attr('preserveAspectRatio', 'xMidYMid meet');
+    .attr('preserveAspectRatio', 'xMidYMid meet')
+    .style('cursor', 'grab');
+
+  // D3 zoom behavior — scroll to zoom, drag to pan
+  const cmZoom = d3.zoom()
+    .scaleExtent([0.8, 12])
+    .on('zoom', function(event) {
+      d3.select('#cm-zoom-layer').attr('transform', event.transform);
+      svg.style('cursor', event.sourceEvent && event.sourceEvent.buttons ? 'grabbing' : 'grab');
+    });
+  svg.call(cmZoom);
+  // Store reset fn on window so the button can call it
+  window._cmResetZoom = function() {
+    svg.transition().duration(350).call(cmZoom.transform, d3.zoomIdentity);
+  };
 
   // Show loading state
   svg.append('text')
@@ -5412,8 +5455,11 @@ async function initCoverageMap() {
   // Remove loading text
   svg.select('#cm-loading-text').remove();
 
+  // Single zoom-transform group — everything inside moves together
+  const zoomLayer = svg.append('g').attr('id', 'cm-zoom-layer');
+
   // Draw county base layer (drawn once, never re-drawn)
-  svg.append('g').attr('class', 'cm-counties')
+  zoomLayer.append('g').attr('class', 'cm-counties')
     .selectAll('path')
     .data(kyGeo.features)
     .enter().append('path')
@@ -5451,7 +5497,7 @@ async function initCoverageMap() {
   };
 
   // Draw county labels — centered on each county's centroid (drawn once)
-  svg.append('g').attr('class', 'cm-county-labels')
+  zoomLayer.append('g').attr('class', 'cm-county-labels')
     .selectAll('text')
     .data(kyGeo.features)
     .enter().append('text')
@@ -5473,8 +5519,8 @@ async function initCoverageMap() {
       .text(d => KY_COUNTY_NAMES[String(d.id)] || '');
 
   // Reserve layers — lines beneath markers
-  svg.append('g').attr('class', 'cm-lines');
-  svg.append('g').attr('class', 'cm-markers');
+  zoomLayer.append('g').attr('class', 'cm-lines');
+  zoomLayer.append('g').attr('class', 'cm-markers');
 
   // ── Build full marker data set (built once, filter applied at render time) ──
   const schoolAddrMap = Object.assign({}, SCHOOL_ADDRESSES, {
@@ -5578,12 +5624,14 @@ function renderCoverageMap() {
     if (m.type !== 'teacher' || !m.assignedMentorId) return;
     const mentor = mentorPosById[m.assignedMentorId];
     if (!mentor) return;
+    const isDark = document.documentElement.classList.contains('dark');
+    const lineColor = isDark ? 'rgba(251,191,36,0.6)' : 'rgba(161,101,0,0.75)';
     lineG.append('line')
       .attr('x1', m.jx).attr('y1', m.jy)
       .attr('x2', mentor.jx).attr('y2', mentor.jy)
-      .attr('stroke', 'rgba(251,191,36,0.55)')
-      .attr('stroke-width', 1.5)
-      .attr('stroke-dasharray', '4 3');
+      .attr('stroke', lineColor)
+      .attr('stroke-width', 2)
+      .attr('stroke-dasharray', '5 3');
   });
 
   // Clear and redraw markers layer only
