@@ -3171,14 +3171,15 @@ function copySelectedTeacherEmails() {
           <div class="col-picker-item" onclick="consColToggle(8,this)"><input type="checkbox" checked> Master Series</div>
           <div class="col-picker-item" onclick="consColToggle(9,this)"><input type="checkbox" checked> MS Mod</div>
           <div class="col-picker-item" onclick="consColToggle(10,this)"><input type="checkbox" checked> Mentor Blocks</div>
-          <div class="col-picker-item" onclick="consColToggle(11,this)"><input type="checkbox" checked> Mentor</div>
-          <div class="col-picker-item" onclick="consColToggle(12,this)"><input type="checkbox" checked> Mock Leader</div>
-          <div class="col-picker-item" onclick="consColToggle(13,this)"><input type="checkbox" checked> Programming</div>
+          <div class="col-picker-item" onclick="consColToggle(11,this)"><input type="checkbox" checked> Fall Forum</div>
+          <div class="col-picker-item" onclick="consColToggle(12,this)"><input type="checkbox" checked> Mentor</div>
+          <div class="col-picker-item" onclick="consColToggle(13,this)"><input type="checkbox" checked> Mock Leader</div>
+          <div class="col-picker-item" onclick="consColToggle(14,this)"><input type="checkbox" checked> Programming</div>
           <div class="col-picker-divider"></div>
           <div class="col-picker-group">Contract Details</div>
-          <div class="col-picker-item" onclick="consColToggle(14,this)"><input type="checkbox" checked> Stipend</div>
-          <div class="col-picker-item" onclick="consColToggle(15,this)"><input type="checkbox" checked> Travel Allow.</div>
-          <div class="col-picker-item" onclick="consColToggle(16,this)"><input type="checkbox" checked> Notes</div>
+          <div class="col-picker-item" onclick="consColToggle(15,this)"><input type="checkbox" checked> Stipend</div>
+          <div class="col-picker-item" onclick="consColToggle(16,this)"><input type="checkbox" checked> Travel Allow.</div>
+          <div class="col-picker-item" onclick="consColToggle(17,this)"><input type="checkbox" checked> Notes</div>
           <div class="col-picker-divider"></div>
           <button class="col-picker-reset" onclick="consColPickerReset()">↺ Show all columns</button>
         </div>
@@ -3200,6 +3201,7 @@ function copySelectedTeacherEmails() {
             <col style="width:95px"><!-- Master Series -->
             <col style="width:82px"><!-- MS Mod -->
             <col style="width:82px"><!-- Mentor Blocks -->
+            <col style="width:72px"><!-- Fall Forum -->
             <col style="width:65px"><!-- Mentor -->
             <col style="width:72px"><!-- Mock -->
             <col style="width:92px"><!-- Programming -->
@@ -3212,7 +3214,7 @@ function copySelectedTeacherEmails() {
               <th colspan="1" class="frozen col-group-identity">Identity</th>
               <th colspan="3" class="col-group-identity" style="background:var(--surface)!important;color:var(--muted)!important">Info</th>
               <th colspan="2" class="col-group-events" style="background:rgba(167,139,250,0.1);color:#a78bfa">Subjects</th>
-              <th colspan="8" class="col-group-checkboxes" style="background:rgba(52,211,153,0.08);color:var(--green)">✓ Engagement</th>
+              <th colspan="9" class="col-group-checkboxes" style="background:rgba(52,211,153,0.08);color:var(--green)">✓ Engagement</th>
               <th colspan="3" class="col-group-meta">Contract Details</th>
             </tr>
             <tr>
@@ -3227,6 +3229,7 @@ function copySelectedTeacherEmails() {
               <th onclick="consSort('masterSeries')">Master Series</th>
               <th onclick="consSort('msMod')">MS Mod</th>
               <th onclick="consSort('mentorBlocks')">Mentor Blocks</th>
+              <th onclick="consSort('fallForum')" style="text-align:center">Fall Forum</th>
               <th onclick="consSort('isMentor')" style="text-align:center">Mentor</th>
               <th onclick="consSort('mockExamLeader')">Mock Leader</th>
               <th onclick="consSort('programming')">Programming</th>
@@ -3619,6 +3622,9 @@ function renderConsultantTable() {
       <td class="editable">${numInput(c.masterSeries,'masterSeries')}</td>
       <td class="editable">${numInput(c.msMod,'msMod')}</td>
       <td class="editable">${numInput(c.mentorBlocks,'mentorBlocks')}</td>
+      <td style="text-align:center">
+        <input type="checkbox" ${c.fallForum ? 'checked' : ''} onchange="consInlineEdit('${c.id}','fallForum',this.checked||null)" style="width:15px;height:15px;accent-color:var(--green);cursor:pointer" title="Fall Forum">
+      </td>
       <td style="text-align:center">
         <input type="checkbox" ${c.isMentor ? 'checked' : ''} onchange="consInlineEdit('${c.id}','isMentor',this.checked||null);renderRosterTable()" style="width:15px;height:15px;accent-color:var(--accent);cursor:pointer" title="Available as mentor">
       </td>
@@ -4064,7 +4070,7 @@ function deleteConsultant(id) {
 })();
 
 // ─── CONSULTANT COLUMN PICKER ───
-const CONS_COL_STORAGE = 'akConsHiddenCols_v3'; // v3: added Mentor col (index 11), shifted Mock Leader+ up by 1
+const CONS_COL_STORAGE = 'akConsHiddenCols_v4'; // v4: added Fall Forum col (index 11), shifted Mentor+ up by 1
 
 function getConsHiddenCols() {
   try { return new Set(JSON.parse(localStorage.getItem(CONS_COL_STORAGE)) || []); }
@@ -4777,7 +4783,7 @@ function normalizeSheetHeader(h) {
 
 // ─── COLUMN MAPS ────────────────────────────────────────────────────
 const TEACHER_COLS = ['id','lastName','firstName','school','district','course','crpYear','program','confirmed','status','firstDayNotes','mentorRequested','teacherEmail','principalEmail'];
-const CONSULTANT_COLS = ['id','lastName','firstName','subj1','subj2','address1','address2','homePhone','cellPhone','email','contract','launchDayBlocks','ffssBlocks','masterSeries','msMod','stipend','travelAllowance','mentorBlocks','isMentor','mockExamLeader','programming'];
+const CONSULTANT_COLS = ['id','lastName','firstName','subj1','subj2','address1','address2','homePhone','cellPhone','email','contract','launchDayBlocks','ffssBlocks','masterSeries','msMod','stipend','travelAllowance','mentorBlocks','fallForum','isMentor','mockExamLeader','programming'];
 // Last Sheet column letter for the Consultants tab, derived from column count so
 // adding/removing fields never desyncs the A1 range (1->A, 18->R, 19->S, …).
 function colLetter(n) { let s = ''; while (n > 0) { const m = (n - 1) % 26; s = String.fromCharCode(65 + m) + s; n = Math.floor((n - 1) / 26); } return s; }
@@ -5458,14 +5464,16 @@ async function initCoverageMap() {
       .attr('font-size', 9)
       .attr('font-family', "'Segoe UI', system-ui, sans-serif")
       .attr('font-weight', '600')
-      .attr('fill', 'rgba(255,255,255,0.75)')
-      .attr('stroke', 'rgba(0,0,0,0.4)')
-      .attr('stroke-width', 0.3)
+      .attr('fill', 'var(--text)')
+      .attr('opacity', 0.7)
+      .attr('stroke', 'var(--bg)')
+      .attr('stroke-width', 2)
       .attr('paint-order', 'stroke')
       .attr('pointer-events', 'none')
       .text(d => KY_COUNTY_NAMES[String(d.id)] || '');
 
-  // Reserve a <g> for markers — renderCoverageMap will populate it
+  // Reserve layers — lines beneath markers
+  svg.append('g').attr('class', 'cm-lines');
   svg.append('g').attr('class', 'cm-markers');
 
   // ── Build full marker data set (built once, filter applied at render time) ──
@@ -5486,11 +5494,13 @@ async function initCoverageMap() {
     if (!coords) { missingNames.push(name + ' (' + t.school + ')'); return; }
     const proj = _cmProjection([coords[1], coords[0]]);
     if (!proj) return;
+    const tData = getTeacherData(t.id);
     if (!byZip[zip]) byZip[zip] = [];
     byZip[zip].push({
       x: proj[0], y: proj[1],
       type: 'teacher',
       mentorRequested: t.mentorRequested === 'Yes',
+      assignedMentorId: tData.assignedMentor || null,
       color: subjColor(t.course),
       name: name,
       subjLabel: subjKey(t.course),
@@ -5552,6 +5562,28 @@ function renderCoverageMap() {
     if (m.type === 'teacher') return m.mentorRequested;
     if (m.type === 'mentor')  return true;
     return false; // hide regular consultants in mentor view
+  });
+
+  // Build a lookup of jittered position by consultant id (only visible markers)
+  const mentorPosById = {};
+  visible.forEach(function(m) {
+    if (m.type === 'mentor') mentorPosById[m.id] = m;
+  });
+
+  // Clear and redraw lines layer
+  const lineG = d3.select('#cm-svg .cm-lines');
+  lineG.selectAll('*').remove();
+
+  visible.forEach(function(m) {
+    if (m.type !== 'teacher' || !m.assignedMentorId) return;
+    const mentor = mentorPosById[m.assignedMentorId];
+    if (!mentor) return;
+    lineG.append('line')
+      .attr('x1', m.jx).attr('y1', m.jy)
+      .attr('x2', mentor.jx).attr('y2', mentor.jy)
+      .attr('stroke', 'rgba(251,191,36,0.55)')
+      .attr('stroke-width', 1.5)
+      .attr('stroke-dasharray', '4 3');
   });
 
   // Clear and redraw markers layer only
