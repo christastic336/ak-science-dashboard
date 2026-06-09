@@ -5768,12 +5768,12 @@ function renderCoverageMap() {
 
         <!-- Tag reference -->
         <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:0.75rem;line-height:1.8;color:var(--muted)">
-          <span style="font-weight:600;color:var(--text)">Available tags:</span><br>
-          <code style="color:var(--accent)">&lt;firstname&gt;</code> &nbsp;
-          <code style="color:var(--accent)">&lt;lastname&gt;</code> &nbsp;
-          <code style="color:var(--accent)">&lt;email&gt;</code> &nbsp;
-          <code style="color:var(--accent)">&lt;addressline1&gt;</code> &nbsp;
-          <code style="color:var(--accent)">&lt;addressline2&gt;</code>
+          <span style="font-weight:600;color:var(--text)">Click a tag to insert at cursor:</span><br>
+          <code onclick="mmInsertTag('&lt;firstname&gt;')"  style="color:var(--accent);cursor:pointer;padding:1px 4px;border-radius:3px;transition:background 0.1s" onmouseover="this.style.background='rgba(79,142,247,0.15)'" onmouseout="this.style.background=''">&lt;firstname&gt;</code> &nbsp;
+          <code onclick="mmInsertTag('&lt;lastname&gt;')"   style="color:var(--accent);cursor:pointer;padding:1px 4px;border-radius:3px;transition:background 0.1s" onmouseover="this.style.background='rgba(79,142,247,0.15)'" onmouseout="this.style.background=''">&lt;lastname&gt;</code> &nbsp;
+          <code onclick="mmInsertTag('&lt;email&gt;')"      style="color:var(--accent);cursor:pointer;padding:1px 4px;border-radius:3px;transition:background 0.1s" onmouseover="this.style.background='rgba(79,142,247,0.15)'" onmouseout="this.style.background=''">&lt;email&gt;</code> &nbsp;
+          <code onclick="mmInsertTag('&lt;addressline1&gt;')" style="color:var(--accent);cursor:pointer;padding:1px 4px;border-radius:3px;transition:background 0.1s" onmouseover="this.style.background='rgba(79,142,247,0.15)'" onmouseout="this.style.background=''">&lt;addressline1&gt;</code> &nbsp;
+          <code onclick="mmInsertTag('&lt;addressline2&gt;')" style="color:var(--accent);cursor:pointer;padding:1px 4px;border-radius:3px;transition:background 0.1s" onmouseover="this.style.background='rgba(79,142,247,0.15)'" onmouseout="this.style.background=''">&lt;addressline2&gt;</code>
         </div>
 
         <!-- Subject -->
@@ -5849,6 +5849,29 @@ function openMailMerge() {
 
 function closeMailMerge() {
   document.getElementById('mail-merge-overlay').style.display = 'none';
+}
+
+// Track which field (subject or body) was last focused
+let _mmLastFocused = null;
+document.addEventListener('DOMContentLoaded', function() {
+  const s = document.getElementById('mm-subject');
+  const b = document.getElementById('mm-body');
+  if (s) s.addEventListener('focus', () => { _mmLastFocused = s; });
+  if (b) b.addEventListener('focus', () => { _mmLastFocused = b; });
+});
+
+function mmInsertTag(tag) {
+  // Default to body if nothing focused yet
+  const el = _mmLastFocused || document.getElementById('mm-body');
+  if (!el) return;
+  el.focus();
+  const start = el.selectionStart;
+  const end   = el.selectionEnd;
+  const val   = el.value;
+  el.value = val.slice(0, start) + tag + val.slice(end);
+  // Place cursor after inserted tag
+  el.selectionStart = el.selectionEnd = start + tag.length;
+  mmPreview();
 }
 
 function mmMerge(template, c) {
