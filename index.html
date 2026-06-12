@@ -461,8 +461,8 @@ select:focus { outline: none; border-color: var(--accent); }
 .cons-name-cell input:nth-of-type(1) { font-weight: 700; color: var(--accent); }
 .cons-info-btn { flex:0 0 auto; background: var(--surface2); border: 1px solid var(--border); color: var(--accent); width: 20px; height: 20px; border-radius: 4px; cursor: pointer; font-size: 0.7rem; line-height: 1; display: flex; align-items: center; justify-content: center; padding: 0; }
 .cons-info-btn:hover { border-color: var(--accent); background: var(--accent); color: #fff; }
-.col-resizer { position: absolute; top: 0; right: 0; width: 6px; height: 100%; cursor: col-resize; z-index: 5; }
-.col-resizer:hover { background: var(--accent); opacity: 0.5; }
+.col-resizer { position: absolute; top: 0; right: 0; width: 12px; height: 100%; cursor: col-resize; z-index: 6; }
+.col-resizer:hover, .col-resizer.dragging { background: var(--accent); opacity: 0.5; }
 .cons-name-cell input:focus { background: rgba(79,142,247,0.08); outline: 1px solid var(--accent); }
 
 /* ─── CONSULTANT MODAL ─── */
@@ -3710,10 +3710,23 @@ function restoreConsColWidths() {
   if (!table) return;
   let widths;
   try { widths = JSON.parse(localStorage.getItem(CONS_COLW_KEY) || 'null'); } catch(e) { widths = null; }
-  if (!Array.isArray(widths)) return;
-  const cols = table.querySelectorAll('colgroup col');
-  widths.forEach((w, i) => { if (w && cols[i]) cols[i].style.width = w; });
+  if (Array.isArray(widths)) {
+    const cols = table.querySelectorAll('colgroup col');
+    widths.forEach((w, i) => { if (w && cols[i]) cols[i].style.width = w; });
+  }
+  syncConsTableWidth();
   applyConsFrozenOffsets();
+}
+
+// Set an explicit table width equal to the sum of column widths.
+// Without this, table-layout:fixed is ignored (width:auto) and resizing the
+// LAST column (Notes) does nothing — the table has no room to grow into.
+function syncConsTableWidth() {
+  const table = document.getElementById('cons-table');
+  if (!table) return;
+  let total = 0;
+  table.querySelectorAll('colgroup col').forEach(c => { total += parseInt(c.style.width, 10) || 100; });
+  table.style.width = total + 'px';
 }
 
 // Attach drag-to-resize handles to consultant table headers (idempotent)
@@ -3726,19 +3739,12 @@ function initConsColumnResize() {
   if (!headerRow) return;
   headerRow.querySelectorAll('th').forEach((th, i) => {
     if (th.querySelector('.col-resizer') || !cols[i]) return;
-    // Wrap th contents in a position:relative div so the absolute-positioned grip
-    // has a proper containing block. We cannot set position:relative on the th itself
-    // because it must stay position:sticky for the frozen header to work.
-    if (!th.querySelector('.col-header-wrap')) {
-      const wrap = document.createElement('div');
-      wrap.className = 'col-header-wrap';
-      wrap.style.cssText = 'position:relative;display:inline-block;width:100%;';
-      while (th.firstChild) wrap.appendChild(th.firstChild);
-      th.appendChild(wrap);
-    }
-    const container = th.querySelector('.col-header-wrap');
+    // position:sticky establishes a containing block for absolutely-positioned
+    // children, so the grip can live directly on the th — full header height,
+    // flush against the actual column boundary (including th padding).
     const grip = document.createElement('span');
     grip.className = 'col-resizer';
+    grip.title = 'Drag to resize column';
     grip.addEventListener('click', e => { e.stopPropagation(); });
     grip.addEventListener('mousedown', e => {
       e.preventDefault();
@@ -3746,16 +3752,19 @@ function initConsColumnResize() {
       const startX = e.pageX;
       const col = cols[i];
       const startW = parseInt(col.style.width, 10) || th.offsetWidth;
+      grip.classList.add('dragging');
       document.body.style.cursor = 'col-resize';
       document.body.style.userSelect = 'none';
       const onMove = ev => {
         const w = Math.max(48, startW + (ev.pageX - startX));
         col.style.width = w + 'px';
+        syncConsTableWidth();
         applyConsFrozenOffsets();
       };
       const onUp = () => {
         document.removeEventListener('mousemove', onMove);
         document.removeEventListener('mouseup', onUp);
+        grip.classList.remove('dragging');
         document.body.style.cursor = '';
         document.body.style.userSelect = '';
         saveConsColWidths();
@@ -3763,7 +3772,7 @@ function initConsColumnResize() {
       document.addEventListener('mousemove', onMove);
       document.addEventListener('mouseup', onUp);
     });
-    container.appendChild(grip);
+    th.appendChild(grip);
   });
 }
 
