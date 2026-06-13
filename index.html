@@ -383,7 +383,7 @@ select:focus { outline: none; border-color: var(--accent); }
 .cons-stats { font-size: 0.75rem; color: var(--muted); white-space: nowrap; }
 .cons-table-wrap { flex: 1; overflow: auto; min-width: 0; min-height: 0; height: 100%; }
 .cons-table { border-collapse: separate; border-spacing: 0; font-size: 0.78rem; table-layout: fixed; min-width: 1200px; }
-.cons-table thead th { position: sticky; top: 0; z-index: 3; background: var(--surface2); color: var(--muted); font-weight: 600; font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.06em; padding: 8px 10px; border-bottom: 2px solid var(--border); border-right: 1px solid var(--border); cursor: pointer; user-select: none; white-space: nowrap; overflow: hidden; }
+.cons-table thead th { position: sticky; top: 0; z-index: 3; background: var(--surface2); color: var(--muted); font-weight: 600; font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.06em; padding: 8px 10px; border-bottom: 2px solid var(--border); border-right: 1px solid var(--border); cursor: pointer; user-select: none; white-space: nowrap; overflow: hidden; box-sizing: border-box; }
 .cons-table thead th:hover { color: var(--text); }
 .cons-table thead th.sorted { color: var(--accent); }
 .cons-table th.frozen, .cons-table td.frozen { position: sticky; z-index: 2; background: var(--surface); }
@@ -396,7 +396,8 @@ select:focus { outline: none; border-color: var(--accent); }
 .cons-table tr.out-of-state td { background: rgba(156,163,175,0.08); }
 .cons-table tr.out-of-state:hover td { background: var(--surface2); }
 .cons-table td.frozen-last, .cons-table th.frozen-last { border-right: 2px solid var(--accent) !important; }
-.cons-table thead tr.group-row th { font-size: 0.65rem; text-align: center; padding: 4px 6px; border-bottom: 1px solid var(--border); letter-spacing: 0.1em; }
+.cons-table thead tr.group-row th { font-size: 0.65rem; text-align: center; padding: 4px 6px; border-bottom: 1px solid var(--border); letter-spacing: 0.1em; background: var(--surface2); top: 0; }
+/* second header row top is set dynamically by fixConsHeaderTops() */
 .cons-table td.editable { padding: 0 !important; overflow: hidden; }
 
 /* Consultant detail panel */
@@ -3243,7 +3244,7 @@ function copySelectedTeacherEmails() {
           <thead>
             <tr class="group-row">
               <th colspan="1" class="frozen col-group-identity">Identity</th>
-              <th colspan="3" class="col-group-identity" style="background:var(--surface)!important;color:var(--muted)!important">Info</th>
+              <th colspan="3" class="col-group-identity" style="color:var(--muted)!important">Info</th>
               <th colspan="2" class="col-group-events" style="background:rgba(167,139,250,0.1);color:#a78bfa">Subjects</th>
               <th colspan="9" class="col-group-checkboxes" style="background:rgba(52,211,153,0.08);color:var(--green)">✓ Engagement</th>
               <th colspan="3" class="col-group-meta">Contract Details</th>
@@ -3672,6 +3673,7 @@ function renderConsultantTable() {
   }).join('');
 
   applyConsFrozenOffsets();
+  fixConsHeaderTops();
   initConsColumnResize();
   updateConsActionUI();
 }
@@ -3680,20 +3682,35 @@ function renderConsultantTable() {
 function applyConsFrozenOffsets() {
   const table = document.getElementById('cons-table');
   if (!table) return;
-  const tbody = document.getElementById('cons-tbody');
-  let leftMap = {};
-  const firstRow = tbody && tbody.querySelector('tr');
-  if (firstRow) {
-    let left = 0;
-    firstRow.querySelectorAll('td.frozen').forEach((td, i) => {
-      leftMap[i] = left;
-      left += td.offsetWidth;
-    });
-  }
+
+  // Build left-offset map from the colgroup widths (reliable even before paint)
+  const cols = [...table.querySelectorAll('colgroup col')];
+  let left = 0;
+  const leftMap = {};
+  cols.forEach((col, i) => {
+    // Only the first column is frozen in the consultant table
+    if (i === 0) {
+      leftMap[0] = left;
+    }
+    left += parseInt(col.style.width, 10) || 100;
+  });
+
+  // Apply to every frozen cell in thead and tbody
   table.querySelectorAll('td.frozen, th.frozen').forEach(cell => {
-    const idx = [...cell.parentElement.children].filter(c2 => c2.classList.contains('frozen')).indexOf(cell);
+    const frozenSiblings = [...cell.parentElement.children].filter(c2 => c2.classList.contains('frozen'));
+    const idx = frozenSiblings.indexOf(cell);
     if (leftMap[idx] !== undefined) cell.style.left = leftMap[idx] + 'px';
   });
+}
+
+// Set sticky top for the second header row based on actual rendered height of group row
+function fixConsHeaderTops() {
+  const table = document.getElementById('cons-table');
+  if (!table) return;
+  const rows = table.querySelectorAll('thead tr');
+  if (rows.length < 2) return;
+  const groupRowHeight = rows[0].offsetHeight || 27;
+  rows[1].querySelectorAll('th').forEach(th => { th.style.top = groupRowHeight + 'px'; });
 }
 
 const CONS_COLW_KEY = 'akConsColWidths';
