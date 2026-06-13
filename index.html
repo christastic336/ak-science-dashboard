@@ -3250,24 +3250,24 @@ function copySelectedTeacherEmails() {
               <th colspan="3" class="col-group-meta">Contract Details</th>
             </tr>
             <tr>
-              <th class="frozen frozen-last" onclick="consSort('lastName')" id="cons-sort-lastName">Name <span class="sort-arrow">↕</span></th>
-              <th onclick="consSort('address2')">Address</th>
-              <th onclick="consSort('email')">Email</th>
-              <th onclick="consSort('contract')" style="text-align:center">Contract</th>
-              <th onclick="consSort('subj1')">Subj 1</th>
-              <th onclick="consSort('subj2')">Subj 2</th>
-              <th onclick="consSort('launchDayBlocks')">Launch Day</th>
-              <th onclick="consSort('ffssBlocks')">FF/SS Blocks</th>
-              <th onclick="consSort('masterSeries')">Master Series</th>
-              <th onclick="consSort('msMod')">MS Mod</th>
-              <th onclick="consSort('mentorBlocks')">Mentor Blocks</th>
-              <th onclick="consSort('fallForum')" style="text-align:center">Fall Forum</th>
-              <th onclick="consSort('isMentor')" style="text-align:center">Mentor</th>
-              <th onclick="consSort('mockExamLeader')">Mock Leader</th>
-              <th onclick="consSort('programming')">Programming</th>
-              <th onclick="consSort('stipend')">Stipend</th>
-              <th onclick="consSort('travelAllowance')">Travel Allow.</th>
-              <th>Notes</th>
+              <th data-col="0" class="frozen frozen-last" onclick="consSort('lastName')" id="cons-sort-lastName">Name <span class="sort-arrow">↕</span></th>
+              <th data-col="1" onclick="consSort('address2')">Address</th>
+              <th data-col="2" onclick="consSort('email')">Email</th>
+              <th data-col="3" onclick="consSort('contract')" style="text-align:center">Contract</th>
+              <th data-col="4" onclick="consSort('subj1')">Subj 1</th>
+              <th data-col="5" onclick="consSort('subj2')">Subj 2</th>
+              <th data-col="6" onclick="consSort('launchDayBlocks')">Launch Day</th>
+              <th data-col="7" onclick="consSort('ffssBlocks')">FF/SS Blocks</th>
+              <th data-col="8" onclick="consSort('masterSeries')">Master Series</th>
+              <th data-col="9" onclick="consSort('msMod')">MS Mod</th>
+              <th data-col="10" onclick="consSort('mentorBlocks')">Mentor Blocks</th>
+              <th data-col="11" onclick="consSort('fallForum')" style="text-align:center">Fall Forum</th>
+              <th data-col="12" onclick="consSort('isMentor')" style="text-align:center">Mentor</th>
+              <th data-col="13" onclick="consSort('mockExamLeader')">Mock Leader</th>
+              <th data-col="14" onclick="consSort('programming')">Programming</th>
+              <th data-col="15" onclick="consSort('stipend')">Stipend</th>
+              <th data-col="16" onclick="consSort('travelAllowance')">Travel Allow.</th>
+              <th data-col="17">Notes</th>
             </tr>
           </thead>
           <tbody id="cons-tbody"></tbody>
@@ -3754,8 +3754,12 @@ function initConsColumnResize() {
   const cols = table.querySelectorAll('colgroup col');
   const headerRow = table.querySelectorAll('thead tr')[1];
   if (!headerRow) return;
-  headerRow.querySelectorAll('th').forEach((th, i) => {
-    if (th.querySelector('.col-resizer') || !cols[i]) return;
+  headerRow.querySelectorAll('th').forEach((th) => {
+    if (th.querySelector('.col-resizer')) return;
+    // Use data-col attribute to get the true colgroup index — immune to
+    // hidden columns shifting the forEach loop index.
+    const colIdx = parseInt(th.dataset.col, 10);
+    if (isNaN(colIdx) || !cols[colIdx]) return;
     // position:sticky establishes a containing block for absolutely-positioned
     // children, so the grip can live directly on the th — full header height,
     // flush against the actual column boundary (including th padding).
@@ -3767,7 +3771,7 @@ function initConsColumnResize() {
       e.preventDefault();
       e.stopPropagation();
       const startX = e.pageX;
-      const col = cols[i];
+      const col = cols[colIdx];
       const startW = parseInt(col.style.width, 10) || th.offsetWidth;
       grip.classList.add('dragging');
       document.body.style.cursor = 'col-resize';
