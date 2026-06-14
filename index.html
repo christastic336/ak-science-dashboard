@@ -3793,6 +3793,10 @@ function initConsColumnResize() {
       document.addEventListener('mousemove', onMove);
       document.addEventListener('mouseup', onUp);
     });
+    // overflow:hidden on sticky th clips the absolutely-positioned grip.
+    // Allow the grip to poke out so it remains interactive on all columns,
+    // including the rightmost (Notes) where there is no adjacent column edge.
+    th.style.overflow = 'visible';
     th.appendChild(grip);
   });
 }
