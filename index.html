@@ -648,6 +648,7 @@ select:focus { outline: none; border-color: var(--accent); }
 
 <div class="top-nav">
   <button class="top-tab active" id="tab-roster" onclick="switchView('roster')">👩‍🏫 Teachers</button>
+  <button class="top-tab" id="tab-gearup" onclick="switchView('gearup')">🎓 GUK</button>
   <button class="top-tab" id="tab-consultant" onclick="switchView('consultant')">🔬 Consultants</button>
   <button class="top-tab" id="tab-programming" onclick="switchView('programming')">🗂️ Programming</button>
   <button class="top-tab" id="tab-coveragemap" onclick="switchView('coveragemap')">📍 Coverage Map</button>
@@ -1341,14 +1342,15 @@ function switchView(view) {
   document.getElementById('roster-view').classList.toggle('visible', view === 'roster');
   document.getElementById('consultant-view').classList.toggle('visible', view === 'consultant');
   document.getElementById('programming-view').classList.toggle('visible', view === 'programming');
-  // Coverage map: show as flex when active, hide otherwise
   document.getElementById('coveragemap-view').style.display = view === 'coveragemap' ? 'flex' : 'none';
+  document.getElementById('gearup-view').style.display = view === 'gearup' ? 'block' : 'none';
   document.getElementById('tab-dashboard').classList.toggle('active', view === 'dashboard');
   document.getElementById('tab-heatmap').classList.toggle('active', view === 'heatmap');
   document.getElementById('tab-roster').classList.toggle('active', view === 'roster');
   document.getElementById('tab-consultant').classList.toggle('active', view === 'consultant');
   document.getElementById('tab-programming').classList.toggle('active', view === 'programming');
   document.getElementById('tab-coveragemap').classList.toggle('active', view === 'coveragemap');
+  document.getElementById('tab-gearup').classList.toggle('active', view === 'gearup');
   if (view === 'heatmap') {
     if (!hmState.geoLoaded) initHeatmap();
     else renderHeatmap();
@@ -6132,6 +6134,213 @@ function mmCopyBodyOnly() {
     setTimeout(() => { document.getElementById('mm-copy-confirm').textContent = ''; }, 2000);
   });
 }
+</script>
+
+<!-- ═══════════════════════════════════════════════════ -->
+<!-- GUK — GEAR UP CRP TEACHER TRACKER VIEW             -->
+<!-- ═══════════════════════════════════════════════════ -->
+<div id="gearup-view" style="display:none; padding:24px; overflow-y:auto; height:calc(100vh - 90px);">
+
+  <!-- Summary Stats -->
+  <div id="gu-stats" style="display:flex; gap:12px; flex-wrap:wrap; margin-bottom:20px;"></div>
+
+  <!-- Filters -->
+  <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:16px; align-items:center;">
+    <input id="gu-search" type="text" placeholder="Search school, course, teacher…"
+      oninput="renderGearUp()"
+      style="background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:7px 12px;border-radius:6px;font-size:0.83rem;width:260px;">
+    <select id="gu-filter-school" onchange="renderGearUp()"
+      style="background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:7px 10px;border-radius:6px;font-size:0.82rem;">
+      <option value="">All Schools</option>
+    </select>
+    <select id="gu-filter-type" onchange="renderGearUp()"
+      style="background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:7px 10px;border-radius:6px;font-size:0.82rem;">
+      <option value="">AP + DC</option>
+      <option value="AP">AP Only</option>
+      <option value="DC">DC Only</option>
+    </select>
+    <select id="gu-filter-training" onchange="renderGearUp()"
+      style="background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:7px 10px;border-radius:6px;font-size:0.82rem;">
+      <option value="">All Training Status</option>
+      <option value="has">Has Summer Training</option>
+      <option value="none">No Training Listed</option>
+    </select>
+    <button onclick="clearGuFilters()"
+      style="background:none;border:1px solid var(--border);color:var(--muted);padding:7px 12px;border-radius:6px;cursor:pointer;font-size:0.8rem;">
+      Clear Filters
+    </button>
+    <span id="gu-count" style="font-size:0.78rem;color:var(--muted);margin-left:auto;"></span>
+  </div>
+
+  <!-- Table -->
+  <div style="overflow-x:auto;">
+    <table class="data-table" id="gu-table" style="min-width:920px;">
+      <thead>
+        <tr>
+          <th style="cursor:pointer;user-select:none;" onclick="guSort('school')">School <span id="gu-sort-school"></span></th>
+          <th style="cursor:pointer;user-select:none;" onclick="guSort('type')">Type <span id="gu-sort-type"></span></th>
+          <th style="cursor:pointer;user-select:none;" onclick="guSort('course')">Course <span id="gu-sort-course"></span></th>
+          <th style="cursor:pointer;user-select:none;" onclick="guSort('teacher')">Teacher <span id="gu-sort-teacher"></span></th>
+          <th style="cursor:pointer;user-select:none;text-align:right;" onclick="guSort('enroll')">Enrollment <span id="gu-sort-enroll"></span></th>
+          <th style="cursor:pointer;user-select:none;" onclick="guSort('emailDate')">Email Date <span id="gu-sort-emailDate"></span></th>
+          <th style="cursor:pointer;user-select:none;" onclick="guSort('meetingDate')">Meeting Date <span id="gu-sort-meetingDate"></span></th>
+          <th style="cursor:pointer;user-select:none;" onclick="guSort('training')">Summer Training <span id="gu-sort-training"></span></th>
+          <th style="cursor:pointer;user-select:none;" onclick="guSort('dcProvider')">DC Provider <span id="gu-sort-dcProvider"></span></th>
+        </tr>
+      </thead>
+      <tbody id="gu-tbody"></tbody>
+    </table>
+  </div>
+  <p style="font-size:0.72rem;color:var(--muted);margin-top:14px;">Source: GEAR UP CRP Teacher Tracking – INTERNAL (read-only). Data as of June 2026.</p>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════
+// GUK DATA
+// ═══════════════════════════════════════════════════
+const guData = [
+  { school:"Anderson Co.", type:"AP", course:"AP English Language",        teacher:"Debra Teets",              enroll:37,  emailDate:"6/2 & 6/10", meetingDate:"6/24", training:"",          dcProvider:"" },
+  { school:"Anderson Co.", type:"AP", course:"AP Biology",                 teacher:"Clark Cooper",             enroll:50,  emailDate:"4/14",       meetingDate:"4/29", training:"",          dcProvider:"" },
+  { school:"Anderson Co.", type:"AP", course:"AP Chemistry",               teacher:"Caitlin Clemons",          enroll:20,  emailDate:"4/27",       meetingDate:"5/13", training:"WKU APSI",  dcProvider:"" },
+  { school:"Anderson Co.", type:"AP", course:"AP Statistics",              teacher:"Alex Hunter",              enroll:22,  emailDate:"5/29",       meetingDate:"",     training:"",          dcProvider:"" },
+  { school:"Anderson Co.", type:"DC", course:"ENG 101 (semester)",         teacher:"Samantha Tucker",          enroll:70,  emailDate:"5/5",        meetingDate:"5/6",  training:"AP TIP-IN", dcProvider:"BCTC" },
+  { school:"Anderson Co.", type:"DC", course:"Biology 112/113",            teacher:"Clark Cooper",             enroll:50,  emailDate:"4/14",       meetingDate:"4/29", training:"",          dcProvider:"BCTC" },
+  { school:"Augusta Ind.", type:"AP", course:"AP English Language",        teacher:"",                         enroll:12,  emailDate:"",           meetingDate:"",     training:"",          dcProvider:"" },
+  { school:"Augusta Ind.", type:"DC", course:"College Algebra/Stats",      teacher:"Corie McKibben",           enroll:null,emailDate:"6/1",         meetingDate:"",     training:"",          dcProvider:"" },
+  { school:"Augusta Ind.", type:"DC", course:"ENG 101/102",                teacher:"C. Hoots (not certified)", enroll:12,  emailDate:"",           meetingDate:"",     training:"",          dcProvider:"" },
+  { school:"Bath Co.",     type:"AP", course:"AP English Language",        teacher:"Gretchen Brewer",          enroll:50,  emailDate:"3/17",       meetingDate:"5/11", training:"EKU APSI",  dcProvider:"" },
+  { school:"Bath Co.",     type:"DC", course:"College Algebra/Trig",       teacher:"Chelsea Vice",             enroll:56,  emailDate:"4/27",       meetingDate:"5/7",  training:"",          dcProvider:"Morehead" },
+  { school:"Mason Co.",    type:"AP", course:"AP English Literature (10)", teacher:"Amber Ruder",              enroll:40,  emailDate:"6/11",       meetingDate:"",     training:"",          dcProvider:"" },
+  { school:"Mason Co.",    type:"AP", course:"AP English Language (11)",   teacher:"Elizabeth Brown",          enroll:40,  emailDate:"6/11",       meetingDate:"6/15", training:"EKU APSI",  dcProvider:"" },
+  { school:"Mason Co.",    type:"AP", course:"AP Chemistry",               teacher:"Brandi Cooper",            enroll:20,  emailDate:"4/3",        meetingDate:"4/7",  training:"WKU APSI",  dcProvider:"" },
+  { school:"Mason Co.",    type:"DC", course:"ENG 100/200 (12)",           teacher:"Facilitated via MSU",      enroll:40,  emailDate:"",           meetingDate:"",     training:"",          dcProvider:"MSU" },
+  { school:"Mercer Co.",   type:"AP", course:"AP English Language",        teacher:"Alex Isaac",               enroll:55,  emailDate:"3/17",       meetingDate:"3/24", training:"",          dcProvider:"" },
+  { school:"Mercer Co.",   type:"DC", course:"CA/Trig – MAT 150/155",      teacher:"Christina Emmanuel",       enroll:60,  emailDate:"4/2",        meetingDate:"4/6",  training:"",          dcProvider:"Campbellsville" },
+  { school:"Mercer Co.",   type:"DC", course:"ENG 101/102",                teacher:"Alexandria Edwards",       enroll:55,  emailDate:"3/17",       meetingDate:"3/24", training:"",          dcProvider:"EKU" },
+  { school:"Mercer Co.",   type:"DC", course:"Bio 100/111",                teacher:"Ekambaram Elumalai",       enroll:20,  emailDate:"",           meetingDate:"6/3",  training:"",          dcProvider:"" },
+  { school:"Mercer Co.",   type:"DC", course:"CHE 101",                    teacher:"Jennifer Putnam",          enroll:30,  emailDate:"3/16",       meetingDate:"3/27", training:"AP-TIP",    dcProvider:"EKU" },
+  { school:"Newport Ind.", type:"AP", course:"AP English Language",        teacher:"",                         enroll:20,  emailDate:"",           meetingDate:"",     training:"",          dcProvider:"" },
+  { school:"Newport Ind.", type:"DC", course:"ENG 101/102",                teacher:"Jessica Vaught",           enroll:20,  emailDate:"5/8",        meetingDate:"5/15", training:"AP-TIP IN", dcProvider:"Gateway" },
+  { school:"Pendleton Co.",type:"AP", course:"AP English Language",        teacher:"Tiffany Espelage",         enroll:30,  emailDate:"3/17",       meetingDate:"3/23", training:"",          dcProvider:"" },
+  { school:"Pendleton Co.",type:"AP", course:"AP Seminar",                 teacher:"",                         enroll:55,  emailDate:"",           meetingDate:"",     training:"",          dcProvider:"" },
+  { school:"Pendleton Co.",type:"DC", course:"ENG 101/102",                teacher:"Kim Bowen",                enroll:50,  emailDate:"3/17",       meetingDate:"3/23", training:"",          dcProvider:"Gateway" },
+  { school:"Pendleton Co.",type:"DC", course:"CA/Stats",                   teacher:"Shonda Justus",            enroll:25,  emailDate:"4/2",        meetingDate:"4/22", training:"",          dcProvider:"" },
+  { school:"Washington Co.",type:"AP",course:"AP EnvSci",                  teacher:"",                         enroll:null,emailDate:"",           meetingDate:"",     training:"",          dcProvider:"" },
+  { school:"Washington Co.",type:"AP",course:"AP English Language",        teacher:"Josh Edwards",             enroll:30,  emailDate:"5/8",        meetingDate:"5/20", training:"",          dcProvider:"" },
+  { school:"Washington Co.",type:"AP",course:"AP English Literature",      teacher:"",                         enroll:30,  emailDate:"",           meetingDate:"",     training:"",          dcProvider:"" },
+  { school:"Washington Co.",type:"DC",course:"Chemistry (K-State, sem.)",  teacher:"",                         enroll:25,  emailDate:"",           meetingDate:"",     training:"",          dcProvider:"K-State" },
+];
+
+// Populate school filter
+(function initGuFilters() {
+  const schools = [...new Set(guData.map(r => r.school))].sort();
+  const sel = document.getElementById('gu-filter-school');
+  schools.forEach(s => {
+    const o = document.createElement('option');
+    o.value = s; o.textContent = s;
+    sel.appendChild(o);
+  });
+})();
+
+const guSortState = { col: 'school', dir: 1 };
+
+function guSort(col) {
+  if (guSortState.col === col) guSortState.dir *= -1;
+  else { guSortState.col = col; guSortState.dir = 1; }
+  renderGearUp();
+}
+
+function getGuFiltered() {
+  const q = (document.getElementById('gu-search').value || '').toLowerCase();
+  const school = document.getElementById('gu-filter-school').value;
+  const type = document.getElementById('gu-filter-type').value;
+  const training = document.getElementById('gu-filter-training').value;
+  return guData.filter(r => {
+    if (school && r.school !== school) return false;
+    if (type && r.type !== type) return false;
+    if (training === 'has' && !r.training) return false;
+    if (training === 'none' && r.training) return false;
+    if (q) {
+      const hay = [r.school, r.course, r.teacher, r.dcProvider].join(' ').toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  });
+}
+
+function renderGearUp() {
+  const rows = getGuFiltered();
+  const col = guSortState.col;
+  rows.sort((a, b) => {
+    let av = a[col], bv = b[col];
+    if (col === 'enroll') { av = av ?? -1; bv = bv ?? -1; }
+    else { av = (av || '').toLowerCase(); bv = (bv || '').toLowerCase(); }
+    return av < bv ? -guSortState.dir : av > bv ? guSortState.dir : 0;
+  });
+
+  ['school','type','course','teacher','enroll','emailDate','meetingDate','training','dcProvider'].forEach(c => {
+    const el = document.getElementById('gu-sort-' + c);
+    if (el) el.textContent = guSortState.col === c ? (guSortState.dir === 1 ? ' ▲' : ' ▼') : '';
+  });
+
+  const apRows = rows.filter(r => r.type === 'AP');
+  const dcRows = rows.filter(r => r.type === 'DC');
+  const totalEnroll = rows.reduce((s, r) => s + (r.enroll || 0), 0);
+  const withTraining = rows.filter(r => r.training).length;
+  const schools = new Set(rows.map(r => r.school)).size;
+  document.getElementById('gu-stats').innerHTML = [
+    { label:'Schools',            val: schools,                  color:'var(--accent)' },
+    { label:'AP Courses',         val: apRows.length,            color:'var(--ap-color, #4f8ef7)' },
+    { label:'DC Courses',         val: dcRows.length,            color:'var(--dc-color, #a78bfa)' },
+    { label:'Total Enrollment',   val: totalEnroll.toLocaleString(), color:'var(--green)' },
+    { label:'With Summer Training', val: withTraining,           color:'var(--yellow)' },
+  ].map(s => `
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 18px;min-width:130px;">
+      <div style="font-size:.68rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:4px;">${s.label}</div>
+      <div style="font-size:1.4rem;font-weight:700;color:${s.color};">${s.val}</div>
+    </div>`).join('');
+
+  document.getElementById('gu-count').textContent = `${rows.length} row${rows.length !== 1 ? 's' : ''}`;
+  const tbody = document.getElementById('gu-tbody');
+  if (rows.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:24px;color:var(--muted);font-style:italic;">No rows match the current filters.</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = rows.map(r => {
+    const typeBadge = r.type === 'AP'
+      ? `<span style="background:rgba(79,142,247,.15);color:#4f8ef7;padding:2px 8px;border-radius:10px;font-size:.72rem;font-weight:600;">AP</span>`
+      : `<span style="background:rgba(167,139,250,.15);color:#a78bfa;padding:2px 8px;border-radius:10px;font-size:.72rem;font-weight:600;">DC</span>`;
+    const enrollVal  = r.enroll != null ? r.enroll : `<span style="color:var(--muted);font-style:italic;">TBD</span>`;
+    const teacherVal = r.teacher   || `<span style="color:var(--muted);">—</span>`;
+    const emailVal   = r.emailDate || `<span style="color:var(--muted);">—</span>`;
+    const meetVal    = r.meetingDate || `<span style="color:var(--muted);">—</span>`;
+    const trainVal   = r.training
+      ? `<span style="background:rgba(251,191,36,.12);color:var(--yellow);padding:2px 8px;border-radius:10px;font-size:.72rem;">${r.training}</span>`
+      : `<span style="color:var(--muted);">—</span>`;
+    const dcpVal = r.dcProvider || `<span style="color:var(--muted);">—</span>`;
+    return `<tr>
+      <td style="font-weight:600;">${r.school}</td>
+      <td>${typeBadge}</td>
+      <td class="course-name">${r.course}</td>
+      <td>${teacherVal}</td>
+      <td style="text-align:right;">${enrollVal}</td>
+      <td>${emailVal}</td>
+      <td>${meetVal}</td>
+      <td>${trainVal}</td>
+      <td>${dcpVal}</td>
+    </tr>`;
+  }).join('');
+}
+
+function clearGuFilters() {
+  document.getElementById('gu-search').value = '';
+  document.getElementById('gu-filter-school').value = '';
+  document.getElementById('gu-filter-type').value = '';
+  document.getElementById('gu-filter-training').value = '';
+  renderGearUp();
+}
+
+renderGearUp();
 </script>
 
 </body>
