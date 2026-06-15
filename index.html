@@ -6159,10 +6159,20 @@ function mmCopyBodyOnly() {
       <option value="AP">AP Only</option>
       <option value="DC">DC Only</option>
     </select>
-    <select id="gu-filter-course" onchange="renderGearUp()"
-      style="background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:7px 10px;border-radius:6px;font-size:0.82rem;">
-      <option value="">All Courses</option>
-    </select>
+    <!-- Course multi-select dropdown -->
+    <div style="position:relative;" id="gu-course-wrap">
+      <button id="gu-course-btn" onclick="toggleCoursePanel(event)"
+        style="background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:7px 10px;border-radius:6px;font-size:0.82rem;cursor:pointer;display:flex;align-items:center;gap:6px;white-space:nowrap;">
+        <span id="gu-course-label">All Courses</span> <span style="color:var(--muted);font-size:.7rem;">▼</span>
+      </button>
+      <div id="gu-course-panel" style="display:none;position:absolute;top:calc(100% + 4px);left:0;z-index:200;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px;min-width:260px;max-height:280px;overflow-y:auto;box-shadow:0 4px 16px rgba(0,0,0,.4);">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;padding-bottom:6px;border-bottom:1px solid var(--border);">
+          <span style="font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;">Select Courses</span>
+          <button onclick="clearCourseFilter()" style="background:none;border:none;color:var(--muted);font-size:.75rem;cursor:pointer;padding:0;">Clear</button>
+        </div>
+        <div id="gu-course-checks"></div>
+      </div>
+    </div>
     <select id="gu-filter-training" onchange="renderGearUp()"
       style="background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:7px 10px;border-radius:6px;font-size:0.82rem;">
       <option value="">All Training Status</option>
@@ -6245,13 +6255,45 @@ const guData = [
     sel.appendChild(o);
   });
   const courses = [...new Set(guData.map(r => r.course))].sort();
-  const csel = document.getElementById('gu-filter-course');
+  const container = document.getElementById('gu-course-checks');
   courses.forEach(c => {
-    const o = document.createElement('option');
-    o.value = c; o.textContent = c;
-    csel.appendChild(o);
+    const id = 'gu-ck-' + c.replace(/[^a-z0-9]/gi, '_');
+    const label = document.createElement('label');
+    label.style.cssText = 'display:flex;align-items:center;gap:8px;padding:5px 4px;border-radius:4px;cursor:pointer;font-size:.82rem;color:var(--text);';
+    label.onmouseenter = () => label.style.background = 'var(--surface2)';
+    label.onmouseleave = () => label.style.background = '';
+    label.innerHTML = `<input type="checkbox" id="${id}" value="${c}" onchange="onCourseCheck()" style="accent-color:var(--accent);cursor:pointer;"> ${c}`;
+    container.appendChild(label);
   });
 })();
+
+function toggleCoursePanel(e) {
+  e.stopPropagation();
+  const panel = document.getElementById('gu-course-panel');
+  panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+}
+document.addEventListener('click', () => {
+  const panel = document.getElementById('gu-course-panel');
+  if (panel) panel.style.display = 'none';
+});
+document.getElementById('gu-course-panel').addEventListener('click', e => e.stopPropagation());
+
+function getSelectedCourses() {
+  return [...document.querySelectorAll('#gu-course-checks input:checked')].map(el => el.value);
+}
+
+function onCourseCheck() {
+  const selected = getSelectedCourses();
+  const btn = document.getElementById('gu-course-label');
+  btn.textContent = selected.length === 0 ? 'All Courses' : selected.length === 1 ? selected[0] : `${selected.length} courses`;
+  renderGearUp();
+}
+
+function clearCourseFilter() {
+  document.querySelectorAll('#gu-course-checks input').forEach(el => el.checked = false);
+  document.getElementById('gu-course-label').textContent = 'All Courses';
+  renderGearUp();
+}
 
 const guSortState = { col: 'school', dir: 1 };
 
@@ -6265,12 +6307,12 @@ function getGuFiltered() {
   const q = (document.getElementById('gu-search').value || '').toLowerCase();
   const school = document.getElementById('gu-filter-school').value;
   const type = document.getElementById('gu-filter-type').value;
-  const course = document.getElementById('gu-filter-course').value;
+  const selectedCourses = getSelectedCourses();
   const training = document.getElementById('gu-filter-training').value;
   return guData.filter(r => {
     if (school && r.school !== school) return false;
     if (type && r.type !== type) return false;
-    if (course && r.course !== course) return false;
+    if (selectedCourses.length && !selectedCourses.includes(r.course)) return false;
     if (training === 'has' && !r.training) return false;
     if (training === 'none' && r.training) return false;
     if (q) {
@@ -6349,7 +6391,8 @@ function clearGuFilters() {
   document.getElementById('gu-search').value = '';
   document.getElementById('gu-filter-school').value = '';
   document.getElementById('gu-filter-type').value = '';
-  document.getElementById('gu-filter-course').value = '';
+  document.querySelectorAll('#gu-course-checks input').forEach(el => el.checked = false);
+  document.getElementById('gu-course-label').textContent = 'All Courses';
   document.getElementById('gu-filter-training').value = '';
   renderGearUp();
 }
