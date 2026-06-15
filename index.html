@@ -6159,6 +6159,10 @@ function mmCopyBodyOnly() {
       <option value="AP">AP Only</option>
       <option value="DC">DC Only</option>
     </select>
+    <select id="gu-filter-course" onchange="renderGearUp()"
+      style="background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:7px 10px;border-radius:6px;font-size:0.82rem;">
+      <option value="">All Courses</option>
+    </select>
     <select id="gu-filter-training" onchange="renderGearUp()"
       style="background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:7px 10px;border-radius:6px;font-size:0.82rem;">
       <option value="">All Training Status</option>
@@ -6240,6 +6244,13 @@ const guData = [
     o.value = s; o.textContent = s;
     sel.appendChild(o);
   });
+  const courses = [...new Set(guData.map(r => r.course))].sort();
+  const csel = document.getElementById('gu-filter-course');
+  courses.forEach(c => {
+    const o = document.createElement('option');
+    o.value = c; o.textContent = c;
+    csel.appendChild(o);
+  });
 })();
 
 const guSortState = { col: 'school', dir: 1 };
@@ -6254,10 +6265,12 @@ function getGuFiltered() {
   const q = (document.getElementById('gu-search').value || '').toLowerCase();
   const school = document.getElementById('gu-filter-school').value;
   const type = document.getElementById('gu-filter-type').value;
+  const course = document.getElementById('gu-filter-course').value;
   const training = document.getElementById('gu-filter-training').value;
   return guData.filter(r => {
     if (school && r.school !== school) return false;
     if (type && r.type !== type) return false;
+    if (course && r.course !== course) return false;
     if (training === 'has' && !r.training) return false;
     if (training === 'none' && r.training) return false;
     if (q) {
