@@ -6146,7 +6146,7 @@ function mmCopyBodyOnly() {
 
     <div class="hm-control">
       <h3>School</h3>
-      <select id="gu-filter-school" onchange="renderGearUp()"
+      <select id="gu-filter-school" onchange="saveGuFilters();renderGearUp()"
         style="background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:6px 10px;border-radius:6px;font-size:0.82rem;width:100%;">
         <option value="">All Schools</option>
       </select>
@@ -6194,7 +6194,7 @@ function mmCopyBodyOnly() {
     <div style="padding:12px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:var(--surface);">
       <h2 style="font-size:1rem;font-weight:700;white-space:nowrap;">GEAR UP Kentucky <span style="color:var(--muted);font-weight:400;font-size:0.8rem;">2025–26</span></h2>
       <input id="gu-search" type="text" placeholder="Search school, course, teacher…"
-        oninput="renderGearUp()"
+        oninput="saveGuFilters();renderGearUp()"
         style="background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:6px 12px;border-radius:6px;font-size:0.83rem;width:240px;">
       <button onclick="clearGuFilters()" style="background:none;border:1px solid var(--border);color:var(--muted);padding:6px 12px;border-radius:6px;cursor:pointer;font-size:0.8rem;">Clear Filters</button>
       <span id="gu-count" style="font-size:0.78rem;color:var(--muted);margin-left:auto;"></span>
@@ -6271,6 +6271,42 @@ const guChecked = new Set();
 const guFilterState = { type: 'all', training: 'all' };
 
 // ── Init filters ──
+// ── Persist filters ──
+const GU_STORAGE_KEY = 'guk_filters_v1';
+function saveGuFilters() {
+  const state = {
+    school: document.getElementById('gu-filter-school').value,
+    search: document.getElementById('gu-search').value,
+    type: guFilterState.type,
+    training: guFilterState.training,
+    courses: getSelectedCourses(),
+  };
+  try { localStorage.setItem(GU_STORAGE_KEY, JSON.stringify(state)); } catch(e) {}
+}
+function loadGuFilters() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(GU_STORAGE_KEY));
+    if (!saved) return;
+    if (saved.school) document.getElementById('gu-filter-school').value = saved.school;
+    if (saved.search) document.getElementById('gu-search').value = saved.search;
+    if (saved.type && saved.type !== 'all') {
+      guFilterState.type = saved.type;
+      document.querySelectorAll('[data-gutype]').forEach(b => b.classList.toggle('active', b.dataset.gutype === saved.type));
+    }
+    if (saved.training && saved.training !== 'all') {
+      guFilterState.training = saved.training;
+      document.querySelectorAll('[data-gutrain]').forEach(b => b.classList.toggle('active', b.dataset.gutrain === saved.training));
+    }
+    if (saved.courses && saved.courses.length) {
+      saved.courses.forEach(c => {
+        const safe = c.replace(/[^a-z0-9]/gi, '_');
+        const el = document.getElementById('gu-ck-' + safe);
+        if (el) el.checked = true;
+      });
+    }
+  } catch(e) {}
+}
+
 (function initGuFilters() {
   const schools = [...new Set(guData.map(r => r.school))].sort();
   const sel = document.getElementById('gu-filter-school');
@@ -6290,17 +6326,20 @@ const guFilterState = { type: 'all', training: 'all' };
     label.innerHTML = `<input type="checkbox" id="gu-ck-${safe}" value="${c}" onchange="onCourseCheck()" style="accent-color:var(--accent);cursor:pointer;flex-shrink:0;"> ${c}`;
     container.appendChild(label);
   });
+  loadGuFilters();
 })();
 
 // ── Sidebar button filters ──
 function guTypeFilter(val) {
   guFilterState.type = val;
   document.querySelectorAll('[data-gutype]').forEach(b => b.classList.toggle('active', b.dataset.gutype === val));
+  saveGuFilters();
   renderGearUp();
 }
 function guTrainFilter(val) {
   guFilterState.training = val;
   document.querySelectorAll('[data-gutrain]').forEach(b => b.classList.toggle('active', b.dataset.gutrain === val));
+  saveGuFilters();
   renderGearUp();
 }
 
@@ -6313,7 +6352,7 @@ function toggleCoursePanel(e) {
 function getSelectedCourses() {
   return [...document.querySelectorAll('#gu-course-checks input:checked')].map(el => el.value);
 }
-function onCourseCheck() { renderGearUp(); }
+function onCourseCheck() { saveGuFilters(); renderGearUp(); }
 function clearCourseFilter() {
   document.querySelectorAll('#gu-course-checks input').forEach(el => el.checked = false);
   renderGearUp();
@@ -6404,6 +6443,7 @@ function clearGuFilters() {
   guFilterState.training = 'all';
   document.querySelectorAll('[data-gutype]').forEach(b => b.classList.toggle('active', b.dataset.gutype === 'all'));
   document.querySelectorAll('[data-gutrain]').forEach(b => b.classList.toggle('active', b.dataset.gutrain === 'all'));
+  try { localStorage.removeItem(GU_STORAGE_KEY); } catch(e) {}
   renderGearUp();
 }
 
