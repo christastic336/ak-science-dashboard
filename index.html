@@ -1343,7 +1343,7 @@ function switchView(view) {
   document.getElementById('consultant-view').classList.toggle('visible', view === 'consultant');
   document.getElementById('programming-view').classList.toggle('visible', view === 'programming');
   document.getElementById('coveragemap-view').style.display = view === 'coveragemap' ? 'flex' : 'none';
-  document.getElementById('gearup-view').style.display = view === 'gearup' ? 'block' : 'none';
+  document.getElementById('gearup-view').style.display = view === 'gearup' ? 'grid' : 'none';
   document.getElementById('tab-dashboard').classList.toggle('active', view === 'dashboard');
   document.getElementById('tab-heatmap').classList.toggle('active', view === 'heatmap');
   document.getElementById('tab-roster').classList.toggle('active', view === 'roster');
@@ -6139,113 +6139,138 @@ function mmCopyBodyOnly() {
 <!-- ═══════════════════════════════════════════════════ -->
 <!-- GUK — GEAR UP CRP TEACHER TRACKER VIEW             -->
 <!-- ═══════════════════════════════════════════════════ -->
-<div id="gearup-view" style="display:none; padding:24px; overflow-y:auto; height:calc(100vh - 90px);">
+<div id="gearup-view" style="display:none; height:calc(100vh - 90px); grid-template-columns:260px 1fr; grid-template-rows:100%; min-height:0;">
 
-  <!-- Summary Stats -->
-  <div id="gu-stats" style="display:flex; gap:12px; flex-wrap:wrap; margin-bottom:20px;"></div>
+  <!-- ── Sidebar ── -->
+  <aside style="background:var(--surface);border-right:1px solid var(--border);overflow-y:auto;display:flex;flex-direction:column;">
 
-  <!-- Filters -->
-  <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:16px; align-items:center;">
-    <input id="gu-search" type="text" placeholder="Search school, course, teacher…"
-      oninput="renderGearUp()"
-      style="background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:7px 12px;border-radius:6px;font-size:0.83rem;width:260px;">
-    <select id="gu-filter-school" onchange="renderGearUp()"
-      style="background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:7px 10px;border-radius:6px;font-size:0.82rem;">
-      <option value="">All Schools</option>
-    </select>
-    <select id="gu-filter-type" onchange="renderGearUp()"
-      style="background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:7px 10px;border-radius:6px;font-size:0.82rem;">
-      <option value="">AP + DC</option>
-      <option value="AP">AP Only</option>
-      <option value="DC">DC Only</option>
-    </select>
-    <!-- Course multi-select dropdown -->
-    <div style="position:relative;" id="gu-course-wrap">
-      <button id="gu-course-btn" onclick="toggleCoursePanel(event)"
-        style="background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:7px 10px;border-radius:6px;font-size:0.82rem;cursor:pointer;display:flex;align-items:center;gap:6px;white-space:nowrap;">
-        <span id="gu-course-label">All Courses</span> <span style="color:var(--muted);font-size:.7rem;">▼</span>
-      </button>
-      <div id="gu-course-panel" style="display:none;position:absolute;top:calc(100% + 4px);left:0;z-index:200;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px;min-width:260px;max-height:280px;overflow-y:auto;box-shadow:0 4px 16px rgba(0,0,0,.4);">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;padding-bottom:6px;border-bottom:1px solid var(--border);">
-          <span style="font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;">Select Courses</span>
-          <button onclick="clearCourseFilter()" style="background:none;border:none;color:var(--muted);font-size:.75rem;cursor:pointer;padding:0;">Clear</button>
-        </div>
-        <div id="gu-course-checks"></div>
+    <div class="hm-control">
+      <h3>School</h3>
+      <select id="gu-filter-school" onchange="renderGearUp()"
+        style="background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:6px 10px;border-radius:6px;font-size:0.82rem;width:100%;">
+        <option value="">All Schools</option>
+      </select>
+    </div>
+
+    <div class="hm-control">
+      <h3>Type</h3>
+      <div class="btn-group" style="flex-direction:column;align-items:flex-start;">
+        <button class="btn active" data-gutype="all" onclick="guTypeFilter('all')">AP + DC</button>
+        <button class="btn" data-gutype="AP" onclick="guTypeFilter('AP')">AP Only</button>
+        <button class="btn" data-gutype="DC" onclick="guTypeFilter('DC')">DC Only</button>
       </div>
     </div>
-    <select id="gu-filter-training" onchange="renderGearUp()"
-      style="background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:7px 10px;border-radius:6px;font-size:0.82rem;">
-      <option value="">All Training Status</option>
-      <option value="has">Has Summer Training</option>
-      <option value="none">No Training Listed</option>
-    </select>
-    <button onclick="clearGuFilters()"
-      style="background:none;border:1px solid var(--border);color:var(--muted);padding:7px 12px;border-radius:6px;cursor:pointer;font-size:0.8rem;">
-      Clear Filters
-    </button>
-    <span id="gu-count" style="font-size:0.78rem;color:var(--muted);margin-left:auto;"></span>
-  </div>
 
-  <!-- Table -->
-  <div style="overflow-x:auto;">
-    <table class="data-table" id="gu-table" style="min-width:920px;">
-      <thead>
-        <tr>
-          <th style="cursor:pointer;user-select:none;" onclick="guSort('school')">School <span id="gu-sort-school"></span></th>
-          <th style="cursor:pointer;user-select:none;" onclick="guSort('type')">Type <span id="gu-sort-type"></span></th>
-          <th style="cursor:pointer;user-select:none;" onclick="guSort('course')">Course <span id="gu-sort-course"></span></th>
-          <th style="cursor:pointer;user-select:none;" onclick="guSort('teacher')">Teacher <span id="gu-sort-teacher"></span></th>
-          <th style="cursor:pointer;user-select:none;text-align:right;" onclick="guSort('enroll')">Enrollment <span id="gu-sort-enroll"></span></th>
-          <th style="cursor:pointer;user-select:none;" onclick="guSort('emailDate')">Email Date <span id="gu-sort-emailDate"></span></th>
-          <th style="cursor:pointer;user-select:none;" onclick="guSort('meetingDate')">Meeting Date <span id="gu-sort-meetingDate"></span></th>
-          <th style="cursor:pointer;user-select:none;" onclick="guSort('training')">Summer Training <span id="gu-sort-training"></span></th>
-          <th style="cursor:pointer;user-select:none;" onclick="guSort('dcProvider')">DC Provider <span id="gu-sort-dcProvider"></span></th>
-        </tr>
-      </thead>
-      <tbody id="gu-tbody"></tbody>
-    </table>
+    <div class="hm-control">
+      <h3>Courses</h3>
+      <div id="gu-course-checks" style="display:flex;flex-direction:column;gap:1px;max-height:220px;overflow-y:auto;"></div>
+    </div>
+
+    <div class="hm-control">
+      <h3>Training</h3>
+      <div class="btn-group" style="flex-direction:column;align-items:flex-start;">
+        <button class="btn active" data-gutrain="all" onclick="guTrainFilter('all')">All</button>
+        <button class="btn" data-gutrain="has" onclick="guTrainFilter('has')">Has Summer Training</button>
+        <button class="btn" data-gutrain="none" onclick="guTrainFilter('none')">None Listed</button>
+      </div>
+    </div>
+
+    <div class="hm-control" style="flex:1;">
+      <h3>Actions <span style="color:var(--muted);font-weight:400;font-size:0.72rem;">(<span id="gu-sel-count">0</span> selected)</span></h3>
+      <div style="display:flex;gap:6px;margin-bottom:8px;">
+        <button class="btn" onclick="guSelectAll()" style="flex:1;text-align:center;color:var(--accent);">☑ All</button>
+        <button class="btn" onclick="guSelectNone()" style="flex:1;text-align:center;color:var(--muted);">☐ None</button>
+      </div>
+      <button class="btn" onclick="guCopySelectedEmails()" style="width:100%;text-align:center;color:var(--accent);">✉ Copy Selected Emails</button>
+      <button class="btn" onclick="guCopyAllEmails()" style="width:100%;text-align:center;color:var(--muted);margin-top:8px;">✉ Copy All Filtered Emails</button>
+      <button class="btn" onclick="guExportCSV()" style="width:100%;text-align:center;color:var(--muted);margin-top:8px;">⬇ Export Filtered CSV</button>
+    </div>
+  </aside>
+
+  <!-- ── Main ── -->
+  <div style="display:flex;flex-direction:column;overflow:hidden;min-height:0;">
+
+    <!-- Topbar -->
+    <div style="padding:12px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:var(--surface);">
+      <h2 style="font-size:1rem;font-weight:700;white-space:nowrap;">GEAR UP Kentucky <span style="color:var(--muted);font-weight:400;font-size:0.8rem;">2025–26</span></h2>
+      <input id="gu-search" type="text" placeholder="Search school, course, teacher…"
+        oninput="renderGearUp()"
+        style="background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:6px 12px;border-radius:6px;font-size:0.83rem;width:240px;">
+      <button onclick="clearGuFilters()" style="background:none;border:1px solid var(--border);color:var(--muted);padding:6px 12px;border-radius:6px;cursor:pointer;font-size:0.8rem;">Clear Filters</button>
+      <span id="gu-count" style="font-size:0.78rem;color:var(--muted);margin-left:auto;"></span>
+    </div>
+
+    <!-- Stats -->
+    <div id="gu-stats" style="display:flex;gap:10px;flex-wrap:wrap;padding:14px 20px;border-bottom:1px solid var(--border);"></div>
+
+    <!-- Table -->
+    <div style="overflow:auto;flex:1;">
+      <table class="data-table" id="gu-table" style="min-width:900px;">
+        <thead>
+          <tr>
+            <th style="width:32px;"><input type="checkbox" id="gu-check-all" onclick="guToggleAll(this.checked)" style="accent-color:var(--accent);cursor:pointer;"></th>
+            <th style="cursor:pointer;user-select:none;" onclick="guSort('school')">School <span id="gu-sort-school"></span></th>
+            <th style="cursor:pointer;user-select:none;" onclick="guSort('type')">Type <span id="gu-sort-type"></span></th>
+            <th style="cursor:pointer;user-select:none;" onclick="guSort('course')">Course <span id="gu-sort-course"></span></th>
+            <th style="cursor:pointer;user-select:none;" onclick="guSort('teacher')">Teacher <span id="gu-sort-teacher"></span></th>
+            <th style="cursor:pointer;user-select:none;text-align:right;" onclick="guSort('enroll')">Enrollment <span id="gu-sort-enroll"></span></th>
+            <th style="cursor:pointer;user-select:none;" onclick="guSort('emailDate')">Email Date <span id="gu-sort-emailDate"></span></th>
+            <th style="cursor:pointer;user-select:none;" onclick="guSort('meetingDate')">Meeting Date <span id="gu-sort-meetingDate"></span></th>
+            <th style="cursor:pointer;user-select:none;" onclick="guSort('training')">Summer Training <span id="gu-sort-training"></span></th>
+            <th style="cursor:pointer;user-select:none;" onclick="guSort('dcProvider')">DC Provider <span id="gu-sort-dcProvider"></span></th>
+          </tr>
+        </thead>
+        <tbody id="gu-tbody"></tbody>
+      </table>
+    </div>
+    <p style="font-size:0.7rem;color:var(--muted);padding:8px 20px;">Source: GEAR UP CRP Teacher Tracking – INTERNAL (read-only). Data as of June 2026.</p>
   </div>
-  <p style="font-size:0.72rem;color:var(--muted);margin-top:14px;">Source: GEAR UP CRP Teacher Tracking – INTERNAL (read-only). Data as of June 2026.</p>
 </div>
 
 <script>
 // ═══════════════════════════════════════════════════
-// GUK DATA
+// GUK DATA (with emails from source sheet)
 // ═══════════════════════════════════════════════════
 const guData = [
-  { school:"Anderson Co.", type:"AP", course:"AP English Language",        teacher:"Debra Teets",              enroll:37,  emailDate:"6/2 & 6/10", meetingDate:"6/24", training:"",          dcProvider:"" },
-  { school:"Anderson Co.", type:"AP", course:"AP Biology",                 teacher:"Clark Cooper",             enroll:50,  emailDate:"4/14",       meetingDate:"4/29", training:"",          dcProvider:"" },
-  { school:"Anderson Co.", type:"AP", course:"AP Chemistry",               teacher:"Caitlin Clemons",          enroll:20,  emailDate:"4/27",       meetingDate:"5/13", training:"WKU APSI",  dcProvider:"" },
-  { school:"Anderson Co.", type:"AP", course:"AP Statistics",              teacher:"Alex Hunter",              enroll:22,  emailDate:"5/29",       meetingDate:"",     training:"",          dcProvider:"" },
-  { school:"Anderson Co.", type:"DC", course:"ENG 101 (semester)",         teacher:"Samantha Tucker",          enroll:70,  emailDate:"5/5",        meetingDate:"5/6",  training:"AP TIP-IN", dcProvider:"BCTC" },
-  { school:"Anderson Co.", type:"DC", course:"Biology 112/113",            teacher:"Clark Cooper",             enroll:50,  emailDate:"4/14",       meetingDate:"4/29", training:"",          dcProvider:"BCTC" },
-  { school:"Augusta Ind.", type:"AP", course:"AP English Language",        teacher:"",                         enroll:12,  emailDate:"",           meetingDate:"",     training:"",          dcProvider:"" },
-  { school:"Augusta Ind.", type:"DC", course:"College Algebra/Stats",      teacher:"Corie McKibben",           enroll:null,emailDate:"6/1",         meetingDate:"",     training:"",          dcProvider:"" },
-  { school:"Augusta Ind.", type:"DC", course:"ENG 101/102",                teacher:"C. Hoots (not certified)", enroll:12,  emailDate:"",           meetingDate:"",     training:"",          dcProvider:"" },
-  { school:"Bath Co.",     type:"AP", course:"AP English Language",        teacher:"Gretchen Brewer",          enroll:50,  emailDate:"3/17",       meetingDate:"5/11", training:"EKU APSI",  dcProvider:"" },
-  { school:"Bath Co.",     type:"DC", course:"College Algebra/Trig",       teacher:"Chelsea Vice",             enroll:56,  emailDate:"4/27",       meetingDate:"5/7",  training:"",          dcProvider:"Morehead" },
-  { school:"Mason Co.",    type:"AP", course:"AP English Literature (10)", teacher:"Amber Ruder",              enroll:40,  emailDate:"6/11",       meetingDate:"",     training:"",          dcProvider:"" },
-  { school:"Mason Co.",    type:"AP", course:"AP English Language (11)",   teacher:"Elizabeth Brown",          enroll:40,  emailDate:"6/11",       meetingDate:"6/15", training:"EKU APSI",  dcProvider:"" },
-  { school:"Mason Co.",    type:"AP", course:"AP Chemistry",               teacher:"Brandi Cooper",            enroll:20,  emailDate:"4/3",        meetingDate:"4/7",  training:"WKU APSI",  dcProvider:"" },
-  { school:"Mason Co.",    type:"DC", course:"ENG 100/200 (12)",           teacher:"Facilitated via MSU",      enroll:40,  emailDate:"",           meetingDate:"",     training:"",          dcProvider:"MSU" },
-  { school:"Mercer Co.",   type:"AP", course:"AP English Language",        teacher:"Alex Isaac",               enroll:55,  emailDate:"3/17",       meetingDate:"3/24", training:"",          dcProvider:"" },
-  { school:"Mercer Co.",   type:"DC", course:"CA/Trig – MAT 150/155",      teacher:"Christina Emmanuel",       enroll:60,  emailDate:"4/2",        meetingDate:"4/6",  training:"",          dcProvider:"Campbellsville" },
-  { school:"Mercer Co.",   type:"DC", course:"ENG 101/102",                teacher:"Alexandria Edwards",       enroll:55,  emailDate:"3/17",       meetingDate:"3/24", training:"",          dcProvider:"EKU" },
-  { school:"Mercer Co.",   type:"DC", course:"Bio 100/111",                teacher:"Ekambaram Elumalai",       enroll:20,  emailDate:"",           meetingDate:"6/3",  training:"",          dcProvider:"" },
-  { school:"Mercer Co.",   type:"DC", course:"CHE 101",                    teacher:"Jennifer Putnam",          enroll:30,  emailDate:"3/16",       meetingDate:"3/27", training:"AP-TIP",    dcProvider:"EKU" },
-  { school:"Newport Ind.", type:"AP", course:"AP English Language",        teacher:"",                         enroll:20,  emailDate:"",           meetingDate:"",     training:"",          dcProvider:"" },
-  { school:"Newport Ind.", type:"DC", course:"ENG 101/102",                teacher:"Jessica Vaught",           enroll:20,  emailDate:"5/8",        meetingDate:"5/15", training:"AP-TIP IN", dcProvider:"Gateway" },
-  { school:"Pendleton Co.",type:"AP", course:"AP English Language",        teacher:"Tiffany Espelage",         enroll:30,  emailDate:"3/17",       meetingDate:"3/23", training:"",          dcProvider:"" },
-  { school:"Pendleton Co.",type:"AP", course:"AP Seminar",                 teacher:"",                         enroll:55,  emailDate:"",           meetingDate:"",     training:"",          dcProvider:"" },
-  { school:"Pendleton Co.",type:"DC", course:"ENG 101/102",                teacher:"Kim Bowen",                enroll:50,  emailDate:"3/17",       meetingDate:"3/23", training:"",          dcProvider:"Gateway" },
-  { school:"Pendleton Co.",type:"DC", course:"CA/Stats",                   teacher:"Shonda Justus",            enroll:25,  emailDate:"4/2",        meetingDate:"4/22", training:"",          dcProvider:"" },
-  { school:"Washington Co.",type:"AP",course:"AP EnvSci",                  teacher:"",                         enroll:null,emailDate:"",           meetingDate:"",     training:"",          dcProvider:"" },
-  { school:"Washington Co.",type:"AP",course:"AP English Language",        teacher:"Josh Edwards",             enroll:30,  emailDate:"5/8",        meetingDate:"5/20", training:"",          dcProvider:"" },
-  { school:"Washington Co.",type:"AP",course:"AP English Literature",      teacher:"",                         enroll:30,  emailDate:"",           meetingDate:"",     training:"",          dcProvider:"" },
-  { school:"Washington Co.",type:"DC",course:"Chemistry (K-State, sem.)",  teacher:"",                         enroll:25,  emailDate:"",           meetingDate:"",     training:"",          dcProvider:"K-State" },
+  { id:'gu1',  school:"Anderson Co.", type:"AP", course:"AP English Language",        teacher:"Debra Teets",              email:"Debra.teets@anderson.kyschools.us",          enroll:37,  emailDate:"6/2 & 6/10", meetingDate:"6/24", training:"",          dcProvider:"" },
+  { id:'gu2',  school:"Anderson Co.", type:"AP", course:"AP Biology",                 teacher:"Clark Cooper",             email:"clark.cooper@anderson.kyschools.us",          enroll:50,  emailDate:"4/14",       meetingDate:"4/29", training:"",          dcProvider:"" },
+  { id:'gu3',  school:"Anderson Co.", type:"AP", course:"AP Chemistry",               teacher:"Caitlin Clemons",          email:"caitlin.clemons@anderson.kyschools.us",       enroll:20,  emailDate:"4/27",       meetingDate:"5/13", training:"WKU APSI",  dcProvider:"" },
+  { id:'gu4',  school:"Anderson Co.", type:"AP", course:"AP Statistics",              teacher:"Alex Hunter",              email:"Alex.hunter@anderson.kyschools.us",           enroll:22,  emailDate:"5/29",       meetingDate:"",     training:"",          dcProvider:"" },
+  { id:'gu5',  school:"Anderson Co.", type:"DC", course:"ENG 101 (semester)",         teacher:"Samantha Tucker",          email:"samantha.tucker2@anderson.kyschools.us",      enroll:70,  emailDate:"5/5",        meetingDate:"5/6",  training:"AP TIP-IN", dcProvider:"BCTC" },
+  { id:'gu6',  school:"Anderson Co.", type:"DC", course:"Biology 112/113",            teacher:"Clark Cooper",             email:"clark.cooper@anderson.kyschools.us",          enroll:50,  emailDate:"4/14",       meetingDate:"4/29", training:"",          dcProvider:"BCTC" },
+  { id:'gu7',  school:"Augusta Ind.", type:"AP", course:"AP English Language",        teacher:"",                         email:"",                                            enroll:12,  emailDate:"",           meetingDate:"",     training:"",          dcProvider:"" },
+  { id:'gu8',  school:"Augusta Ind.", type:"DC", course:"College Algebra/Stats",      teacher:"Corie McKibben",           email:"Corie.mckibben@augusta.kyschools.us",         enroll:null,emailDate:"6/1",        meetingDate:"",     training:"",          dcProvider:"" },
+  { id:'gu9',  school:"Augusta Ind.", type:"DC", course:"ENG 101/102",                teacher:"C. Hoots (not certified)", email:"",                                            enroll:12,  emailDate:"",           meetingDate:"",     training:"",          dcProvider:"" },
+  { id:'gu10', school:"Bath Co.",     type:"AP", course:"AP English Language",        teacher:"Gretchen Brewer",          email:"",                                            enroll:50,  emailDate:"3/17",       meetingDate:"5/11", training:"EKU APSI",  dcProvider:"" },
+  { id:'gu11', school:"Bath Co.",     type:"DC", course:"College Algebra/Trig",       teacher:"Chelsea Vice",             email:"Chelsea.Vice@bath.kyschool.us",               enroll:56,  emailDate:"4/27",       meetingDate:"5/7",  training:"",          dcProvider:"Morehead" },
+  { id:'gu12', school:"Mason Co.",    type:"AP", course:"AP English Literature (10)", teacher:"Amber Ruder",              email:"amber.ruder@mason.kyschools.us",              enroll:40,  emailDate:"6/11",       meetingDate:"",     training:"",          dcProvider:"" },
+  { id:'gu13', school:"Mason Co.",    type:"AP", course:"AP English Language (11)",   teacher:"Elizabeth Brown",          email:"elizabeth.brown@mason.kyschools.us",          enroll:40,  emailDate:"6/11",       meetingDate:"6/15", training:"EKU APSI",  dcProvider:"" },
+  { id:'gu14', school:"Mason Co.",    type:"AP", course:"AP Chemistry",               teacher:"Brandi Cooper",            email:"Brandi.cooper@mason.kyschools.us",            enroll:20,  emailDate:"4/3",        meetingDate:"4/7",  training:"WKU APSI",  dcProvider:"" },
+  { id:'gu15', school:"Mason Co.",    type:"DC", course:"ENG 100/200 (12)",           teacher:"Facilitated via MSU",      email:"",                                            enroll:40,  emailDate:"",           meetingDate:"",     training:"",          dcProvider:"MSU" },
+  { id:'gu16', school:"Mercer Co.",   type:"AP", course:"AP English Language",        teacher:"Alex Isaac",               email:"",                                            enroll:55,  emailDate:"3/17",       meetingDate:"3/24", training:"",          dcProvider:"" },
+  { id:'gu17', school:"Mercer Co.",   type:"DC", course:"CA/Trig – MAT 150/155",      teacher:"Christina Emmanuel",       email:"",                                            enroll:60,  emailDate:"4/2",        meetingDate:"4/6",  training:"",          dcProvider:"Campbellsville" },
+  { id:'gu18', school:"Mercer Co.",   type:"DC", course:"ENG 101/102",                teacher:"Alexandria Edwards",       email:"",                                            enroll:55,  emailDate:"3/17",       meetingDate:"3/24", training:"",          dcProvider:"EKU" },
+  { id:'gu19', school:"Mercer Co.",   type:"DC", course:"Bio 100/111",                teacher:"Ekambaram Elumalai",       email:"ekambaram.elumalai@mercer.kyschools.us",      enroll:20,  emailDate:"",           meetingDate:"6/3",  training:"",          dcProvider:"" },
+  { id:'gu20', school:"Mercer Co.",   type:"DC", course:"CHE 101",                    teacher:"Jennifer Putnam",          email:"",                                            enroll:30,  emailDate:"3/16",       meetingDate:"3/27", training:"AP-TIP",    dcProvider:"EKU" },
+  { id:'gu21', school:"Newport Ind.", type:"AP", course:"AP English Language",        teacher:"",                         email:"",                                            enroll:20,  emailDate:"",           meetingDate:"",     training:"",          dcProvider:"" },
+  { id:'gu22', school:"Newport Ind.", type:"DC", course:"ENG 101/102",                teacher:"Jessica Vaught",           email:"",                                            enroll:20,  emailDate:"5/8",        meetingDate:"5/15", training:"AP-TIP IN", dcProvider:"Gateway" },
+  { id:'gu23', school:"Pendleton Co.",type:"AP", course:"AP English Language",        teacher:"Tiffany Espelage",         email:"Tiffany.espelage@pendleton.kyschools.us",     enroll:30,  emailDate:"3/17",       meetingDate:"3/23", training:"",          dcProvider:"" },
+  { id:'gu24', school:"Pendleton Co.",type:"AP", course:"AP Seminar",                 teacher:"",                         email:"",                                            enroll:55,  emailDate:"",           meetingDate:"",     training:"",          dcProvider:"" },
+  { id:'gu25', school:"Pendleton Co.",type:"DC", course:"ENG 101/102",                teacher:"Kim Bowen",                email:"Kim.bowen@pendleton.kyschools.us",            enroll:50,  emailDate:"3/17",       meetingDate:"3/23", training:"",          dcProvider:"Gateway" },
+  { id:'gu26', school:"Pendleton Co.",type:"DC", course:"CA/Stats",                   teacher:"Shonda Justus",            email:"shonda.justus@pendleton.kyschools.us",        enroll:25,  emailDate:"4/2",        meetingDate:"4/22", training:"",          dcProvider:"" },
+  { id:'gu27', school:"Washington Co.",type:"AP",course:"AP EnvSci",                  teacher:"",                         email:"",                                            enroll:null,emailDate:"",           meetingDate:"",     training:"",          dcProvider:"" },
+  { id:'gu28', school:"Washington Co.",type:"AP",course:"AP English Language",        teacher:"Josh Edwards",             email:"josh.edwards@washington.kyschools.us",        enroll:30,  emailDate:"5/8",        meetingDate:"5/20", training:"",          dcProvider:"" },
+  { id:'gu29', school:"Washington Co.",type:"AP",course:"AP English Literature",      teacher:"",                         email:"",                                            enroll:30,  emailDate:"",           meetingDate:"",     training:"",          dcProvider:"" },
+  { id:'gu30', school:"Washington Co.",type:"DC",course:"Chemistry (K-State, sem.)",  teacher:"",                         email:"",                                            enroll:25,  emailDate:"",           meetingDate:"",     training:"",          dcProvider:"K-State" },
 ];
 
-// Populate school filter
+// ── Selection state ──
+const guChecked = new Set();
+
+// ── Filter state ──
+const guFilterState = { type: 'all', training: 'all' };
+
+// ── Init filters ──
 (function initGuFilters() {
   const schools = [...new Set(guData.map(r => r.school))].sort();
   const sel = document.getElementById('gu-filter-school');
@@ -6257,64 +6282,62 @@ const guData = [
   const courses = [...new Set(guData.map(r => r.course))].sort();
   const container = document.getElementById('gu-course-checks');
   courses.forEach(c => {
-    const id = 'gu-ck-' + c.replace(/[^a-z0-9]/gi, '_');
     const label = document.createElement('label');
-    label.style.cssText = 'display:flex;align-items:center;gap:8px;padding:5px 4px;border-radius:4px;cursor:pointer;font-size:.82rem;color:var(--text);';
+    label.style.cssText = 'display:flex;align-items:center;gap:8px;padding:4px 6px;border-radius:4px;cursor:pointer;font-size:.81rem;color:var(--text);';
     label.onmouseenter = () => label.style.background = 'var(--surface2)';
     label.onmouseleave = () => label.style.background = '';
-    label.innerHTML = `<input type="checkbox" id="${id}" value="${c}" onchange="onCourseCheck()" style="accent-color:var(--accent);cursor:pointer;"> ${c}`;
+    const safe = c.replace(/[^a-z0-9]/gi, '_');
+    label.innerHTML = `<input type="checkbox" id="gu-ck-${safe}" value="${c}" onchange="onCourseCheck()" style="accent-color:var(--accent);cursor:pointer;flex-shrink:0;"> ${c}`;
     container.appendChild(label);
   });
 })();
 
+// ── Sidebar button filters ──
+function guTypeFilter(val) {
+  guFilterState.type = val;
+  document.querySelectorAll('[data-gutype]').forEach(b => b.classList.toggle('active', b.dataset.gutype === val));
+  renderGearUp();
+}
+function guTrainFilter(val) {
+  guFilterState.training = val;
+  document.querySelectorAll('[data-gutrain]').forEach(b => b.classList.toggle('active', b.dataset.gutrain === val));
+  renderGearUp();
+}
+
+// ── Course checkbox panel ──
 function toggleCoursePanel(e) {
   e.stopPropagation();
   const panel = document.getElementById('gu-course-panel');
-  panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+  if (panel) panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
 }
-document.addEventListener('click', () => {
-  const panel = document.getElementById('gu-course-panel');
-  if (panel) panel.style.display = 'none';
-});
-document.getElementById('gu-course-panel').addEventListener('click', e => e.stopPropagation());
-
 function getSelectedCourses() {
   return [...document.querySelectorAll('#gu-course-checks input:checked')].map(el => el.value);
 }
-
-function onCourseCheck() {
-  const selected = getSelectedCourses();
-  const btn = document.getElementById('gu-course-label');
-  btn.textContent = selected.length === 0 ? 'All Courses' : selected.length === 1 ? selected[0] : `${selected.length} courses`;
-  renderGearUp();
-}
-
+function onCourseCheck() { renderGearUp(); }
 function clearCourseFilter() {
   document.querySelectorAll('#gu-course-checks input').forEach(el => el.checked = false);
-  document.getElementById('gu-course-label').textContent = 'All Courses';
   renderGearUp();
 }
 
+// ── Sort state ──
 const guSortState = { col: 'school', dir: 1 };
-
 function guSort(col) {
   if (guSortState.col === col) guSortState.dir *= -1;
   else { guSortState.col = col; guSortState.dir = 1; }
   renderGearUp();
 }
 
+// ── Filter ──
 function getGuFiltered() {
   const q = (document.getElementById('gu-search').value || '').toLowerCase();
   const school = document.getElementById('gu-filter-school').value;
-  const type = document.getElementById('gu-filter-type').value;
   const selectedCourses = getSelectedCourses();
-  const training = document.getElementById('gu-filter-training').value;
   return guData.filter(r => {
     if (school && r.school !== school) return false;
-    if (type && r.type !== type) return false;
+    if (guFilterState.type !== 'all' && r.type !== guFilterState.type) return false;
     if (selectedCourses.length && !selectedCourses.includes(r.course)) return false;
-    if (training === 'has' && !r.training) return false;
-    if (training === 'none' && r.training) return false;
+    if (guFilterState.training === 'has' && !r.training) return false;
+    if (guFilterState.training === 'none' && r.training) return false;
     if (q) {
       const hay = [r.school, r.course, r.teacher, r.dcProvider].join(' ').toLowerCase();
       if (!hay.includes(q)) return false;
@@ -6323,6 +6346,68 @@ function getGuFiltered() {
   });
 }
 
+// ── Selection ──
+function guToggleAll(checked) {
+  const rows = getGuFiltered();
+  rows.forEach(r => checked ? guChecked.add(r.id) : guChecked.delete(r.id));
+  renderGearUp();
+}
+function guToggleRow(id, checked) {
+  checked ? guChecked.add(id) : guChecked.delete(id);
+  document.getElementById('gu-sel-count').textContent = guChecked.size;
+}
+function guSelectAll() {
+  getGuFiltered().forEach(r => guChecked.add(r.id));
+  renderGearUp();
+}
+function guSelectNone() {
+  guChecked.clear();
+  renderGearUp();
+}
+
+// ── Actions ──
+function guCopySelectedEmails() {
+  const emails = [...guChecked]
+    .map(id => guData.find(r => r.id === id))
+    .filter(r => r && r.email)
+    .map(r => r.email);
+  if (!emails.length) { alert('No selected rows have emails.'); return; }
+  navigator.clipboard.writeText(emails.join('; ')).then(() => alert(`Copied ${emails.length} email(s) to clipboard.`));
+}
+function guCopyAllEmails() {
+  const emails = getGuFiltered().filter(r => r.email).map(r => r.email);
+  if (!emails.length) { alert('No emails in the current filtered rows.'); return; }
+  navigator.clipboard.writeText(emails.join('; ')).then(() => alert(`Copied ${emails.length} email(s) to clipboard.`));
+}
+function guExportCSV() {
+  const rows = getGuFiltered();
+  const headers = ['School','Type','Course','Teacher','Email','Enrollment','Email Date','Meeting Date','Summer Training','DC Provider'];
+  const lines = [headers.join(',')];
+  rows.forEach(r => {
+    lines.push([r.school, r.type, r.course, r.teacher, r.email, r.enroll ?? '', r.emailDate, r.meetingDate, r.training, r.dcProvider]
+      .map(v => `"${(v||'').toString().replace(/"/g,'""')}"`)
+      .join(','));
+  });
+  const blob = new Blob([lines.join('\n')], {type:'text/csv'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'GUK_CRP_Tracker.csv';
+  a.click();
+}
+
+// ── Clear all filters ──
+function clearGuFilters() {
+  document.getElementById('gu-search').value = '';
+  document.getElementById('gu-filter-school').value = '';
+  document.querySelectorAll('#gu-course-checks input').forEach(el => el.checked = false);
+  guFilterState.type = 'all';
+  guFilterState.training = 'all';
+  document.querySelectorAll('[data-gutype]').forEach(b => b.classList.toggle('active', b.dataset.gutype === 'all'));
+  document.querySelectorAll('[data-gutrain]').forEach(b => b.classList.toggle('active', b.dataset.gutrain === 'all'));
+  renderGearUp();
+}
+
+// ── Render ──
 function renderGearUp() {
   const rows = getGuFiltered();
   const col = guSortState.col;
@@ -6338,42 +6423,51 @@ function renderGearUp() {
     if (el) el.textContent = guSortState.col === c ? (guSortState.dir === 1 ? ' ▲' : ' ▼') : '';
   });
 
+  // Stats
   const apRows = rows.filter(r => r.type === 'AP');
   const dcRows = rows.filter(r => r.type === 'DC');
   const totalEnroll = rows.reduce((s, r) => s + (r.enroll || 0), 0);
   const withTraining = rows.filter(r => r.training).length;
   const schools = new Set(rows.map(r => r.school)).size;
   document.getElementById('gu-stats').innerHTML = [
-    { label:'Schools',            val: schools,                  color:'var(--accent)' },
-    { label:'AP Courses',         val: apRows.length,            color:'var(--ap-color, #4f8ef7)' },
-    { label:'DC Courses',         val: dcRows.length,            color:'var(--dc-color, #a78bfa)' },
-    { label:'Total Enrollment',   val: totalEnroll.toLocaleString(), color:'var(--green)' },
-    { label:'With Summer Training', val: withTraining,           color:'var(--yellow)' },
+    { label:'Schools',              val: schools,                      color:'var(--accent)' },
+    { label:'AP Courses',           val: apRows.length,                color:'#4f8ef7' },
+    { label:'DC Courses',           val: dcRows.length,                color:'#a78bfa' },
+    { label:'Total Enrollment',     val: totalEnroll.toLocaleString(), color:'var(--green)' },
+    { label:'With Summer Training', val: withTraining,                 color:'var(--yellow)' },
   ].map(s => `
-    <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 18px;min-width:130px;">
-      <div style="font-size:.68rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:4px;">${s.label}</div>
-      <div style="font-size:1.4rem;font-weight:700;color:${s.color};">${s.val}</div>
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 16px;min-width:120px;">
+      <div style="font-size:.68rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:2px;">${s.label}</div>
+      <div style="font-size:1.3rem;font-weight:700;color:${s.color};">${s.val}</div>
     </div>`).join('');
 
+  // Count + header checkbox
   document.getElementById('gu-count').textContent = `${rows.length} row${rows.length !== 1 ? 's' : ''}`;
+  document.getElementById('gu-sel-count').textContent = guChecked.size;
+  const allChecked = rows.length > 0 && rows.every(r => guChecked.has(r.id));
+  document.getElementById('gu-check-all').checked = allChecked;
+
+  // Rows
   const tbody = document.getElementById('gu-tbody');
   if (rows.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:24px;color:var(--muted);font-style:italic;">No rows match the current filters.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="10" style="text-align:center;padding:24px;color:var(--muted);font-style:italic;">No rows match the current filters.</td></tr>`;
     return;
   }
   tbody.innerHTML = rows.map(r => {
+    const checked = guChecked.has(r.id);
     const typeBadge = r.type === 'AP'
       ? `<span style="background:rgba(79,142,247,.15);color:#4f8ef7;padding:2px 8px;border-radius:10px;font-size:.72rem;font-weight:600;">AP</span>`
       : `<span style="background:rgba(167,139,250,.15);color:#a78bfa;padding:2px 8px;border-radius:10px;font-size:.72rem;font-weight:600;">DC</span>`;
     const enrollVal  = r.enroll != null ? r.enroll : `<span style="color:var(--muted);font-style:italic;">TBD</span>`;
-    const teacherVal = r.teacher   || `<span style="color:var(--muted);">—</span>`;
-    const emailVal   = r.emailDate || `<span style="color:var(--muted);">—</span>`;
-    const meetVal    = r.meetingDate || `<span style="color:var(--muted);">—</span>`;
+    const teacherVal = r.teacher    || `<span style="color:var(--muted);">—</span>`;
+    const emailVal   = r.emailDate  || `<span style="color:var(--muted);">—</span>`;
+    const meetVal    = r.meetingDate|| `<span style="color:var(--muted);">—</span>`;
     const trainVal   = r.training
       ? `<span style="background:rgba(251,191,36,.12);color:var(--yellow);padding:2px 8px;border-radius:10px;font-size:.72rem;">${r.training}</span>`
       : `<span style="color:var(--muted);">—</span>`;
     const dcpVal = r.dcProvider || `<span style="color:var(--muted);">—</span>`;
-    return `<tr>
+    return `<tr style="${checked ? 'background:rgba(79,142,247,.08);' : ''}">
+      <td><input type="checkbox" ${checked?'checked':''} onchange="guToggleRow('${r.id}',this.checked);renderGearUp()" style="accent-color:var(--accent);cursor:pointer;"></td>
       <td style="font-weight:600;">${r.school}</td>
       <td>${typeBadge}</td>
       <td class="course-name">${r.course}</td>
@@ -6385,16 +6479,6 @@ function renderGearUp() {
       <td>${dcpVal}</td>
     </tr>`;
   }).join('');
-}
-
-function clearGuFilters() {
-  document.getElementById('gu-search').value = '';
-  document.getElementById('gu-filter-school').value = '';
-  document.getElementById('gu-filter-type').value = '';
-  document.querySelectorAll('#gu-course-checks input').forEach(el => el.checked = false);
-  document.getElementById('gu-course-label').textContent = 'All Courses';
-  document.getElementById('gu-filter-training').value = '';
-  renderGearUp();
 }
 
 renderGearUp();
