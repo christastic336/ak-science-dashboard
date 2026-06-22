@@ -1079,15 +1079,23 @@ function renderHeatmap() {
     if (v !== null) vals.push(v);
   }
 
+  const percentile = (arr, p) => {
+    const sorted = [...arr].sort((a, b) => a - b);
+    const idx = (p / 100) * (sorted.length - 1);
+    const lo = Math.floor(idx), hi = Math.ceil(idx);
+    return sorted[lo] + (sorted[hi] - sorted[lo]) * (idx - lo);
+  };
+
   let colorScale;
   if (mode === 'yoy') {
-    const absMax = Math.max(Math.abs(d3.min(vals) || 0), Math.abs(d3.max(vals) || 1));
+    const p5 = percentile(vals, 5), p95 = percentile(vals, 95);
+    const absMax = Math.max(Math.abs(p5), Math.abs(p95), 1);
     const domain = [-absMax, 0, absMax];
     colorScale = d3.scaleLinear().domain(domain).range(['#ef4444','#374151','#22c55e']).clamp(true);
     updateLegend('yoy', -absMax, absMax, metric);
   } else {
-    const minV = d3.min(vals) || 0;
-    const maxV = d3.max(vals) || 1;
+    const minV = percentile(vals, 5);
+    const maxV = percentile(vals, 95);
     colorScale = d3.scaleLinear().domain([minV, maxV]).range(['#1e3a5f','#22c55e']).clamp(true);
     updateLegend('single', minV, maxV, metric);
   }
