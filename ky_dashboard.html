@@ -1127,13 +1127,17 @@ function getHmValue(cname, prog, mode, yearIdx, metric, demoIdx) {
     if (mode === 'single') {
       const row = getSubjRow(yearIdx);
       if (!row || row[metric] === null || row[metric] === undefined) return null;
-      return row[metric];
+      if (metric === 'pr') return row[metric];
+      // Normalize count metrics by enrollment
+      if (!row.e || row.e === 0) return null;
+      return Math.round(row[metric] / row.e * 100);
     } else {
       const curr = getSubjRow(1), prev = getSubjRow(0);
       if (!curr || !prev) return null;
       const cv = curr[metric], pv = prev[metric];
       if (cv === null || cv === undefined || pv === null || pv === undefined) return null;
-      return cv - pv;
+      if (pv === 0) return null;
+      return Math.round((cv - pv) / pv * 100);
     }
   }
 
@@ -1143,14 +1147,18 @@ function getHmValue(cname, prog, mode, yearIdx, metric, demoIdx) {
   if (mode === 'single') {
     const row = cd[prog][yearIdx]?.[demoIdx];
     if (!row || row[metric] === null || row[metric] === undefined) return null;
-    return row[metric];
+    if (metric === 'pr') return row[metric];
+    // Normalize count metrics by enrollment
+    if (!row.e || row.e === 0) return null;
+    return Math.round(row[metric] / row.e * 100);
   } else {
     const curr = cd[prog][1]?.[demoIdx];
     const prev = cd[prog][0]?.[demoIdx];
     if (!curr || !prev) return null;
     const cv = curr[metric], pv = prev[metric];
     if (cv === null || cv === undefined || pv === null || pv === undefined) return null;
-    return cv - pv;
+    if (pv === 0) return null;
+    return Math.round((cv - pv) / pv * 100);
   }
 }
 
@@ -1197,27 +1205,29 @@ function onCountyHover(event, d) {
     rows = '<div class="tt-nodata">No data available</div>';
   } else {
 
-    const fmt = (v) => v === null || v === undefined ? '–' : metric === 'pr' ? v + '%' : v.toLocaleString();
+    const fmtRaw = (v) => v === null || v === undefined ? '–' : metric === 'pr' ? v + '%' : v.toLocaleString();
+    const fmtPct = (v) => v === null || v === undefined ? '–' : v + '%';
 
     if (mode === 'yoy') {
       const diff = (cv !== null && cv !== undefined && pv !== null && pv !== undefined) ? cv - pv : null;
       const pct = (diff !== null && pv && pv > 0) ? Math.round(diff / pv * 100) : null;
-      const diffClass = diff === null ? 'tt-neutral' : diff > 0 ? 'tt-up' : diff < 0 ? 'tt-down' : 'tt-neutral';
-      const arrow = diff === null ? '' : diff > 0 ? '▲ ' : diff < 0 ? '▼ ' : '→ ';
-      const sign = diff !== null && diff > 0 ? '+' : '';
+      const pctClass = pct === null ? 'tt-neutral' : pct > 0 ? 'tt-up' : pct < 0 ? 'tt-down' : 'tt-neutral';
+      const arrow = pct === null ? '' : pct > 0 ? '▲ ' : pct < 0 ? '▼ ' : '→ ';
+      const sign = pct !== null && pct > 0 ? '+' : '';
 
-      rows += `<div class="tt-row"><span class="tt-label">${yLabels[0]}</span><span class="tt-val">${fmt(pv)}</span></div>`;
-      rows += `<div class="tt-row"><span class="tt-label">${yLabels[1]}</span><span class="tt-val">${fmt(cv)}</span></div>`;
-      rows += `<div class="tt-row"><span class="tt-label">Change</span><span class="tt-val ${diffClass}">${diff !== null ? arrow + sign + fmt(diff) : '–'}</span></div>`;
-      if (pct !== null) rows += `<div class="tt-row"><span class="tt-label">% Change</span><span class="tt-val ${diffClass}">${sign}${pct}%</span></div>`;
+      rows += `<div class="tt-row"><span class="tt-label">${yLabels[0]}</span><span class="tt-val">${fmtRaw(pv)}</span></div>`;
+      rows += `<div class="tt-row"><span class="tt-label">${yLabels[1]}</span><span class="tt-val">${fmtRaw(cv)}</span></div>`;
+      rows += `<div class="tt-row"><span class="tt-label">% Change</span><span class="tt-val ${pctClass}">${pct !== null ? arrow + sign + pct + '%' : '–'}</span></div>`;
     } else {
-      const row = cd[prog][yearIdx]?.[demoIdx];
+      const row = curr;
       const v = row?.[metric];
-      rows += `<div class="tt-row"><span class="tt-label">${mLabel}</span><span class="tt-val">${fmt(v)}</span></div>`;
-      if (metric !== 'pr' && row?.e) {
-        rows += `<div class="tt-row"><span class="tt-label">Enrollment</span><span class="tt-val">${row.e.toLocaleString()}</span></div>`;
-        if (row.q !== null && row.q !== undefined) rows += `<div class="tt-row"><span class="tt-label">Qualifying</span><span class="tt-val">${row.q.toLocaleString()}</span></div>`;
-        if (row.pr !== null) rows += `<div class="tt-row"><span class="tt-label">Pass Rate</span><span class="tt-val">${row.pr}%</span></div>`;
+      if (metric === 'pr') {
+        rows += `<div class="tt-row"><span class="tt-label">${mLabel}</span><span class="tt-val">${fmtPct(v)}</span></div>`;
+      } else {
+        const pctVal = (v !== null && v !== undefined && row?.e && row.e > 0) ? Math.round(v / row.e * 100) : null;
+        rows += `<div class="tt-row"><span class="tt-label">${mLabel} (raw)</span><span class="tt-val">${fmtRaw(v)}</span></div>`;
+        rows += `<div class="tt-row"><span class="tt-label">Enrollment</span><span class="tt-val">${row?.e != null ? row.e.toLocaleString() : '–'}</span></div>`;
+        rows += `<div class="tt-row"><span class="tt-label">${mLabel} %</span><span class="tt-val">${fmtPct(pctVal)}</span></div>`;
       }
     }
   }
@@ -1255,13 +1265,14 @@ function updateLegend(mode, minV, maxV, metric) {
   ctx.fillStyle = grad;
   ctx.fillRect(0, 0, w, h);
 
-  const fmt = v => metric === 'pr' ? v + '%' : (Math.abs(v) >= 1000 ? (v/1000).toFixed(1)+'k' : String(Math.round(v)));
+  const fmt = v => Math.round(v) + '%';
   const sign = v => v > 0 ? '+' : '';
   document.getElementById('hm-leg-min').textContent = mode === 'yoy' ? sign(minV) + fmt(minV) : fmt(minV);
   document.getElementById('hm-leg-max').textContent = sign(maxV) + fmt(maxV);
 
   const mLabel = METRIC_LABELS[metric];
-  document.getElementById('hm-legend-title').textContent = mode === 'yoy' ? `YoY Change in ${mLabel}` : mLabel;
+  const legSingleLabel = metric === 'pr' ? mLabel : `${mLabel} (% of Enrollment)`;
+  document.getElementById('hm-legend-title').textContent = mode === 'yoy' ? `YoY % Change in ${mLabel}` : legSingleLabel;
 }
 
 function updateHmTitleBar() {
@@ -1270,9 +1281,10 @@ function updateHmTitleBar() {
   const pLabel = PROG_LABELS[prog];
   const dLabel = subj !== 'all' ? 'All Students' : DB.demos[demoIdx];
   const subjLabel = subj !== 'all' ? ` · ${subj}` : '';
+  const singleLabel = metric === 'pr' ? mLabel : `${mLabel} (% of Enrollment)`;
   const title = mode === 'yoy'
-    ? `Kentucky ${pLabel} ${mLabel} — Year-over-Year Change${subjLabel}`
-    : `Kentucky ${pLabel} ${mLabel} — ${DB.years[yearIdx]}${subjLabel}`;
+    ? `Kentucky ${pLabel} ${mLabel} — Year-over-Year % Change${subjLabel}`
+    : `Kentucky ${pLabel} ${singleLabel} — ${DB.years[yearIdx]}${subjLabel}`;
   const subtitle = mode === 'yoy'
     ? `${DB.years[0]} → ${DB.years[1]} · ${dLabel}`
     : `${DB.years[yearIdx]} · ${dLabel}`;
