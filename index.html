@@ -1583,7 +1583,8 @@ function getHmValue(cname, prog, mode, yearIdx, metric, demoIdx) {
       if (!curr || !prev) return null;
       const cv = curr[metric], pv = prev[metric];
       if (cv === null || cv === undefined || pv === null || pv === undefined) return null;
-      return cv - pv;
+      if (pv === 0) return null;
+      return Math.round((cv - pv) / pv * 100);
     }
   }
 
@@ -1600,7 +1601,8 @@ function getHmValue(cname, prog, mode, yearIdx, metric, demoIdx) {
     if (!curr || !prev) return null;
     const cv = curr[metric], pv = prev[metric];
     if (cv === null || cv === undefined || pv === null || pv === undefined) return null;
-    return cv - pv;
+    if (pv === 0) return null;
+    return Math.round((cv - pv) / pv * 100);
   }
 }
 
