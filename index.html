@@ -1527,9 +1527,9 @@ function renderHeatmap() {
 
   let colorScale;
   if (mode === 'yoy') {
-    // Fixed ±25% scale — outliers beyond that get amber so they don't
+    // Fixed ±75% scale — outliers beyond that get amber so they don't
     // compress the range and make realistic differences look identical
-    const absMax = 25;
+    const absMax = 75;
     const domain = [-absMax, 0, absMax];
     colorScale = d3.scaleLinear().domain(domain).range(['#ef4444','#374151','#22c55e']).clamp(true);
     updateLegend('yoy', -absMax, absMax, metric);
@@ -1546,7 +1546,7 @@ function renderHeatmap() {
     if (!cname) return '#1a1d27';
     const v = getHmValue(cname, prog, mode, yearIdx, metric, demoIdx);
     if (v === null) return '#2a2d3a';
-    if (mode === 'yoy' && Math.abs(v) > 25) return '#f59e0b'; // amber = outlier
+    if (mode === 'yoy' && Math.abs(v) > 75) return '#f59e0b'; // amber = outlier
     return colorScale(v);
   });
 
@@ -1870,7 +1870,7 @@ window.addEventListener('DOMContentLoaded', init);
       </div>
       <div id="hm-leg-outlier" style="display:flex;align-items:center;gap:7px;margin-top:8px;">
         <div style="width:14px;height:14px;border-radius:3px;background:#f59e0b;flex-shrink:0;"></div>
-        <span style="font-size:0.7rem;color:var(--muted);">Outlier (&gt;±25% change)</span>
+        <span style="font-size:0.7rem;color:var(--muted);">Outlier (&gt;±75% change)</span>
       </div>
     </div>
     <div class="hm-control" style="font-size:0.75rem;color:var(--muted);line-height:1.6;flex:1">
