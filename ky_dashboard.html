@@ -1087,15 +1087,25 @@ function renderHeatmap() {
   };
 
   let colorScale;
+  if (vals.length === 0) {
+    // No data at all — paint everything as no-data, skip scale
+    d3.selectAll('.hm-county').attr('fill', '#2a2d3a');
+    updateHmTitleBar();
+    return;
+  }
   if (mode === 'yoy') {
-    const p5 = percentile(vals, 5), p95 = percentile(vals, 95);
-    const absMax = Math.max(Math.abs(p5), Math.abs(p95), 1);
+    // Use tighter percentile clip so small-county outliers don't flatten the scale
+    const p15 = percentile(vals, 15), p85 = percentile(vals, 85);
+    // Enforce a minimum spread of ±10% so the scale is always meaningful
+    const absMax = Math.max(Math.abs(p15), Math.abs(p85), 10);
     const domain = [-absMax, 0, absMax];
     colorScale = d3.scaleLinear().domain(domain).range(['#ef4444','#374151','#22c55e']).clamp(true);
     updateLegend('yoy', -absMax, absMax, metric);
   } else {
-    const minV = percentile(vals, 5);
-    const maxV = percentile(vals, 95);
+    let minV = percentile(vals, 5);
+    let maxV = percentile(vals, 95);
+    // Prevent collapsed domain — guarantee at least a 1-unit spread
+    if (minV === maxV) { minV = Math.max(0, minV - 1); maxV = maxV + 1; }
     colorScale = d3.scaleLinear().domain([minV, maxV]).range(['#1e3a5f','#22c55e']).clamp(true);
     updateLegend('single', minV, maxV, metric);
   }
