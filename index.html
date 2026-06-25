@@ -502,6 +502,37 @@ select:focus { outline: none; border-color: var(--accent); }
 .auth-avatar { width: 20px; height: 20px; border-radius: 50%; object-fit: cover; }
 .auth-email { max-width: 140px; overflow: hidden; text-overflow: ellipsis; color: var(--muted); font-size: 0.72rem; }
 
+/* ─── AUTH GATE (login wall) ─── */
+#auth-gate {
+  position: fixed; inset: 0; z-index: 2000;
+  background: var(--bg);
+  display: flex; align-items: center; justify-content: center;
+}
+#auth-gate.hidden { display: none; }
+.ag-card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 16px;
+  padding: 48px 44px; max-width: 420px; width: 90%; text-align: center;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+}
+.ag-logo { font-size: 2.8rem; line-height: 1; margin-bottom: 16px; }
+.ag-title { font-size: 1.4rem; font-weight: 700; color: var(--text); margin-bottom: 8px; }
+.ag-sub { font-size: 0.88rem; color: var(--muted); line-height: 1.6; margin-bottom: 28px; }
+.ag-btn {
+  background: var(--accent); border: none; color: #fff;
+  padding: 12px 28px; border-radius: 8px; cursor: pointer;
+  font-size: 0.95rem; font-weight: 700; display: inline-flex; align-items: center; gap: 10px;
+  transition: filter 0.15s;
+}
+.ag-btn:hover { filter: brightness(1.1); }
+.ag-btn:disabled { opacity: 0.6; cursor: not-allowed; filter: none; }
+.ag-error {
+  margin-top: 18px; padding: 10px 14px; border-radius: 8px;
+  background: rgba(248,113,113,0.12); border: 1px solid var(--red);
+  color: var(--red); font-size: 0.82rem; display: none;
+}
+.ag-error.show { display: block; }
+.ag-domains { margin-top: 20px; font-size: 0.72rem; color: var(--muted); }
+
 .sync-indicator {
   font-size: 0.72rem; padding: 3px 8px; border-radius: 10px; display: flex; align-items: center; gap: 4px;
   background: var(--surface2); border: 1px solid var(--border); color: var(--muted);
@@ -595,6 +626,21 @@ select:focus { outline: none; border-color: var(--accent); }
 </head>
 <body>
 
+<!-- ─── AUTH GATE ─── -->
+<div id="auth-gate">
+  <div class="ag-card">
+    <div class="ag-logo">🔐</div>
+    <div class="ag-title">Kentucky Advanced Courses</div>
+    <div class="ag-sub">This dashboard is restricted to AdvanceKentucky and KSTC staff. Sign in with your organizational Google account to continue.</div>
+    <button class="ag-btn" id="ag-signin-btn" onclick="authGateSignIn()">
+      <svg width="18" height="18" viewBox="0 0 48 48" style="flex-shrink:0"><path fill="#4285F4" d="M44.5 20H24v8.5h11.8C34.7 33.9 29.8 37 24 37c-7.2 0-13-5.8-13-13s5.8-13 13-13c3.1 0 5.9 1.1 8.1 2.9l6.4-6.4C34.6 4.1 29.6 2 24 2 11.8 2 2 11.8 2 24s9.8 22 22 22c11 0 21-8 21-21 0-1.3-.2-2.7-.5-4z"/></svg>
+      Sign in with Google
+    </button>
+    <div class="ag-error" id="ag-error"></div>
+    <div class="ag-domains">Access requires an @kstc.com or @advanceky.com account</div>
+  </div>
+</div>
+
 <div id="loading">
   <div class="spinner"></div>
   <p>Loading Kentucky Advanced Courses data…</p>
@@ -639,7 +685,7 @@ select:focus { outline: none; border-color: var(--accent); }
     <h2>Sign in to save your work</h2>
     <p>You're not signed in to Google. Changes you make <strong>won't sync to the spreadsheet</strong> until you do. Sign in now so nothing gets lost.</p>
     <button class="sm-btn" onclick="gsiSignIn()">Sign in with Google</button>
-    <button class="sm-dismiss" onclick="dismissSigninModal()">Continue without signing in</button>
+    <button class="sm-dismiss" onclick="dismissSigninModal()" style="display:none">Continue without signing in</button>
   </div>
 </div>
 
@@ -4678,11 +4724,9 @@ let _gsiUserPicture = null;
     document.getElementById('auth-btn').style.display = 'none';
     document.getElementById('sync-indicator').classList.remove('hidden');
     document.getElementById('sync-indicator').textContent = '⚠ Offline';
-  } else {
-    // Sync is configured but we're not signed in yet — nudge after a short delay
-    // (gives any silent token restore a moment to complete first).
-    setTimeout(() => { if (!_gsiAccessToken) showSigninModal(); }, 1200);
   }
+  // Auth gate is shown by default (not hidden). It stays up until a valid
+  // @kstc.com or @advanceky.com sign-in succeeds — see authGateSignIn().
 })();
 
 // ─── GSI SIGN-IN / SIGN-OUT ─────────────────────────────────────────
@@ -4727,6 +4771,74 @@ function gsiSignOut() {
   _gsiUserPicture = null;
   updateAuthUI(false);
   setSyncState('offline');
+  // Re-show auth gate on sign-out
+  const gate = document.getElementById('auth-gate');
+  if (gate) gate.classList.remove('hidden');
+}
+
+// ─── AUTH GATE ───────────────────────────────────────────────────────
+const ALLOWED_DOMAINS = ['kstc.com', 'advanceky.com'];
+
+function authGateSignIn() {
+  const btn = document.getElementById('ag-signin-btn');
+  const errEl = document.getElementById('ag-error');
+  btn.disabled = true;
+  btn.textContent = 'Signing in…';
+  errEl.classList.remove('show');
+
+  const client = google.accounts.oauth2.initTokenClient({
+    client_id: CLIENT_ID,
+    scope: SCOPES,
+    callback: async (tokenResponse) => {
+      if (tokenResponse.error) {
+        showAuthGateError('Sign-in failed. Please try again.');
+        btn.disabled = false;
+        btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 48 48" style="flex-shrink:0"><path fill="#4285F4" d="M44.5 20H24v8.5h11.8C34.7 33.9 29.8 37 24 37c-7.2 0-13-5.8-13-13s5.8-13 13-13c3.1 0 5.9 1.1 8.1 2.9l6.4-6.4C34.6 4.1 29.6 2 24 2 11.8 2 2 11.8 2 24s9.8 22 22 22c11 0 21-8 21-21 0-1.3-.2-2.7-.5-4z"/></svg> Sign in with Google';
+        return;
+      }
+      _gsiAccessToken = tokenResponse.access_token;
+
+      // Fetch profile to check domain
+      try {
+        const resp = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+          headers: { Authorization: 'Bearer ' + _gsiAccessToken }
+        });
+        const info = await resp.json();
+        const email = info.email || '';
+        const domain = email.split('@')[1] || '';
+
+        if (!ALLOWED_DOMAINS.includes(domain)) {
+          // Revoke and block — wrong domain
+          google.accounts.oauth2.revoke(_gsiAccessToken, () => {});
+          _gsiAccessToken = null;
+          showAuthGateError(`Access denied. ${email} is not an authorized account. Use your @kstc.com or @advanceky.com address.`);
+          btn.disabled = false;
+          btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 48 48" style="flex-shrink:0"><path fill="#4285F4" d="M44.5 20H24v8.5h11.8C34.7 33.9 29.8 37 24 37c-7.2 0-13-5.8-13-13s5.8-13 13-13c3.1 0 5.9 1.1 8.1 2.9l6.4-6.4C34.6 4.1 29.6 2 24 2 11.8 2 2 11.8 2 24s9.8 22 22 22c11 0 21-8 21-21 0-1.3-.2-2.7-.5-4z"/></svg> Sign in with Google';
+          return;
+        }
+
+        _gsiUserEmail   = email;
+        _gsiUserPicture = info.picture || '';
+      } catch(e) {
+        showAuthGateError('Could not verify your account. Please try again.');
+        btn.disabled = false;
+        btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 48 48" style="flex-shrink:0"><path fill="#4285F4" d="M44.5 20H24v8.5h11.8C34.7 33.9 29.8 37 24 37c-7.2 0-13-5.8-13-13s5.8-13 13-13c3.1 0 5.9 1.1 8.1 2.9l6.4-6.4C34.6 4.1 29.6 2 24 2 11.8 2 2 11.8 2 24s9.8 22 22 22c11 0 21-8 21-21 0-1.3-.2-2.7-.5-4z"/></svg> Sign in with Google';
+        return;
+      }
+
+      // Valid — dismiss gate, update header auth UI, load sheets data
+      document.getElementById('auth-gate').classList.add('hidden');
+      updateAuthUI(true);
+      await loadSheetsData();
+    }
+  });
+  client.requestAccessToken({ prompt: '' });
+}
+
+function showAuthGateError(msg) {
+  const el = document.getElementById('ag-error');
+  el.textContent = msg;
+  el.classList.add('show');
 }
 
 // ─── SIGN-IN REMINDER MODAL ──────────────────────────────────────────
