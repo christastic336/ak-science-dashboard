@@ -5034,7 +5034,7 @@ async function loadSheetsData() {
       sheetsGet('Teachers!A:N'),
       sheetsGet(`Consultants!A:${CONSULTANT_LAST_COL}`),
       sheetsGet('ConsultantNotes!A:C'),
-      sheetsGet('TeacherEvents!A:C'),
+      sheetsGet('TeacherEvents!A:C').catch(() => ({ values: [] })),
       sheetsGet('ProgrammingLayout!A:D').catch(() => ({ values: [] })),
       sheetsGet('ProgrammingManual!A:D').catch(() => ({ values: [] })),
     ]);
