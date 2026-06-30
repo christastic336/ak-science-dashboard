@@ -3486,21 +3486,8 @@ function copySelectedTeacherEmails() {
 
 <!-- ─── PROGRAMMING VIEW ─── -->
 <style>
-#programming-view { display: none; height: calc(100vh - 90px); flex-direction: column; background: var(--bg); overflow: hidden; }
+#programming-view { display: none; height: calc(100vh - 90px); flex-direction: column; background: var(--bg); }
 #programming-view.visible { display: flex; }
-#prog-board-panel { overflow: hidden; }
-#prog-notes-panel { overflow-y: auto; }
-/* Programming inner tabs */
-.prog-inner-tabbar { display: flex; gap: 0; border-bottom: 1px solid var(--border); flex-shrink: 0; padding: 0 20px; }
-.prog-inner-tab { background: transparent; border: none; border-bottom: 3px solid transparent; color: var(--muted); padding: 10px 18px; cursor: pointer; font-size: 0.88rem; font-weight: 600; margin-bottom: -1px; transition: color 0.15s, border-color 0.15s; }
-.prog-inner-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
-.prog-inner-tab:hover:not(.active) { color: var(--text); }
-.prog-inner-panel { flex: 1; min-height: 0; }
-/* Programming notes */
-.prog-note-section { display: flex; flex-direction: column; gap: 6px; }
-.prog-note-label { font-size: 0.8rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
-.prog-note-area { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-size: 0.88rem; line-height: 1.5; padding: 10px 12px; resize: vertical; min-height: 90px; font-family: inherit; transition: border-color 0.15s; }
-.prog-note-area:focus { outline: none; border-color: var(--accent); }
 .prog-topbar { display: flex; align-items: center; gap: 14px; padding: 12px 20px; border-bottom: 1px solid var(--border); flex-shrink: 0; flex-wrap: wrap; }
 .prog-topbar h2 { margin: 0; font-size: 1.05rem; }
 .prog-switch { display: flex; gap: 6px; }
@@ -3536,65 +3523,27 @@ function copySelectedTeacherEmails() {
 .prog-empty { color: var(--muted); font-size: 0.85rem; font-style: italic; }
 </style>
 <div id=”programming-view”>
-  <!-- Inner tab strip -->
-  <div class=”prog-inner-tabbar”>
-    <button class=”prog-inner-tab active” id=”prog-itab-notes” onclick=”switchProgInnerTab('notes')”>📝 Notes</button>
-    <button class=”prog-inner-tab” id=”prog-itab-board” onclick=”switchProgInnerTab('board')”>🗂️ Board</button>
+  <div class=”prog-topbar”>
+    <h2>Programming Board</h2>
+    <div class=”prog-switch” id=”prog-switch”>
+      <button data-board=”launchday” class=”active” onclick=”setProgBoard('launchday')”>Launch Day</button>
+      <button data-board=”fallforum” onclick=”setProgBoard('fallforum')”>Fall Forum</button>
+      <button data-board=”examprep” onclick=”setProgBoard('examprep')”>Exam Prep</button>
+    </div>
+    <div class=”prog-addcard” id=”prog-addcard”>
+      <input type=”text” id=”prog-new-label” placeholder=”Card label…” onkeydown=”if(event.key==='Enter')addManualProgCard()”>
+      <input type=”text” id=”prog-new-sub” placeholder=”Subtitle (optional)…” onkeydown=”if(event.key==='Enter')addManualProgCard()”>
+      <button onclick=”addManualProgCard()”>+ Add Card</button>
+    </div>
+    <span class=”prog-hint”>Check the “Programming” box on a consultant to add their card, or add a manual card above. Drag cards onto the board to organize.</span>
   </div>
-
-  <!-- NOTES TAB -->
-  <div id=”prog-notes-panel” class=”prog-inner-panel” style=”display:flex;flex-direction:column;overflow-y:auto;padding:20px 24px;gap:24px”>
-    <p style=”margin:0;font-size:0.82rem;color:var(--muted)”>Notes are saved automatically as you type.</p>
-
-    <div class=”prog-note-section”>
-      <label class=”prog-note-label”>Master Series</label>
-      <textarea class=”prog-note-area” id=”pnote-masterSeries” placeholder=”Notes for Master Series…” oninput=”saveProgNote('masterSeries',this.value)”></textarea>
+  <div class=”prog-board-area”>
+    <div class=”prog-board” id=”prog-board”>
+      <div class=”prog-board-title” id=”prog-board-title”>Launch Day</div>
     </div>
-    <div class=”prog-note-section”>
-      <label class=”prog-note-label”>Launch Day</label>
-      <textarea class=”prog-note-area” id=”pnote-launchDay” placeholder=”Notes for Launch Day…” oninput=”saveProgNote('launchDay',this.value)”></textarea>
-    </div>
-    <div class=”prog-note-section”>
-      <label class=”prog-note-label”>Fall Forum</label>
-      <textarea class=”prog-note-area” id=”pnote-fallForum” placeholder=”Notes for Fall Forum…” oninput=”saveProgNote('fallForum',this.value)”></textarea>
-    </div>
-    <div class=”prog-note-section”>
-      <label class=”prog-note-label”>Content Review Sessions</label>
-      <textarea class=”prog-note-area” id=”pnote-contentReview” placeholder=”Notes for Content Review Sessions…” oninput=”saveProgNote('contentReview',this.value)”></textarea>
-    </div>
-    <div class=”prog-note-section”>
-      <label class=”prog-note-label”>Foundations of Teaching and Learning</label>
-      <textarea class=”prog-note-area” id=”pnote-foundationsTeaching” placeholder=”Notes for Foundations of Teaching and Learning…” oninput=”saveProgNote('foundationsTeaching',this.value)”></textarea>
-    </div>
-    <div class=”prog-note-section”>
-      <label class=”prog-note-label”>Other</label>
-      <textarea class=”prog-note-area” id=”pnote-other” placeholder=”Other notes…” oninput=”saveProgNote('other',this.value)”></textarea>
-    </div>
-  </div>
-
-  <!-- BOARD TAB -->
-  <div id=”prog-board-panel” class=”prog-inner-panel” style=”display:none;flex-direction:column;flex:1;min-height:0”>
-    <div class=”prog-topbar”>
-      <div class=”prog-switch” id=”prog-switch”>
-        <button data-board=”launchday” class=”active” onclick=”setProgBoard('launchday')”>Launch Day</button>
-        <button data-board=”fallforum” onclick=”setProgBoard('fallforum')”>Fall Forum</button>
-        <button data-board=”examprep” onclick=”setProgBoard('examprep')”>Exam Prep</button>
-      </div>
-      <div class=”prog-addcard” id=”prog-addcard”>
-        <input type=”text” id=”prog-new-label” placeholder=”Card label…” onkeydown=”if(event.key==='Enter')addManualProgCard()”>
-        <input type=”text” id=”prog-new-sub” placeholder=”Subtitle (optional)…” onkeydown=”if(event.key==='Enter')addManualProgCard()”>
-        <button onclick=”addManualProgCard()”>+ Add Card</button>
-      </div>
-      <span class=”prog-hint”>Check the “Programming” box on a consultant to add their card, or add a manual card above. Drag cards onto the board to organize.</span>
-    </div>
-    <div class=”prog-board-area”>
-      <div class=”prog-board” id=”prog-board”>
-        <div class=”prog-board-title” id=”prog-board-title”>Launch Day</div>
-      </div>
-      <div class=”prog-tray”>
-        <div class=”prog-tray-title”>Unplaced — drag onto the board above</div>
-        <div class=”prog-tray-cards” id=”prog-tray-cards”></div>
-      </div>
+    <div class=”prog-tray”>
+      <div class=”prog-tray-title”>Unplaced — drag onto the board above</div>
+      <div class=”prog-tray-cards” id=”prog-tray-cards”></div>
     </div>
   </div>
 </div>
@@ -4493,46 +4442,7 @@ function loadProgPositionsLocal() {
 // Load any locally-saved layout immediately on parse (Sheet sync overrides later).
 loadProgPositionsLocal();
 
-// ── Programming inner tabs ──────────────────────────────────────────
-const PROG_NOTES_KEY = 'akProgrammingNotes_v1';
-const PROG_NOTE_KEYS = ['masterSeries','launchDay','fallForum','contentReview','foundationsTeaching','other'];
-
-function saveProgNote(key, val) {
-  try {
-    const notes = JSON.parse(localStorage.getItem(PROG_NOTES_KEY) || '{}');
-    notes[key] = val;
-    localStorage.setItem(PROG_NOTES_KEY, JSON.stringify(notes));
-  } catch(e) {}
-}
-
-function loadProgNotes() {
-  try {
-    const notes = JSON.parse(localStorage.getItem(PROG_NOTES_KEY) || '{}');
-    PROG_NOTE_KEYS.forEach(k => {
-      const el = document.getElementById('pnote-' + k);
-      if (el) el.value = notes[k] || '';
-    });
-  } catch(e) {}
-}
-
-function switchProgInnerTab(tab) {
-  const notesPanel = document.getElementById('prog-notes-panel');
-  const boardPanel = document.getElementById('prog-board-panel');
-  document.getElementById('prog-itab-notes').classList.toggle('active', tab === 'notes');
-  document.getElementById('prog-itab-board').classList.toggle('active', tab === 'board');
-  if (tab === 'notes') {
-    notesPanel.style.display = 'flex';
-    boardPanel.style.display = 'none';
-    loadProgNotes();
-  } else {
-    notesPanel.style.display = 'none';
-    boardPanel.style.display = 'flex';
-    renderProgrammingBoard();
-  }
-}
-
 function initProgrammingView() {
-  loadProgNotes();
   setProgBoard(_progCurrentBoard);
 }
 
