@@ -1383,11 +1383,13 @@ const COUNTY_DATA = {"Adair":{"ap":[[{"e":41,"co":41,"t":36,"q":21,"pr":51},{"e"
 // VIEW SWITCHER
 // ═══════════════════════════════════════════════════
 function switchView(view) {
+  const _views = ['dashboard-view','heatmap-view','roster-view','consultant-view','programming-view','coveragemap-view','gearup-view'];
+  _views.forEach(id => { const el = document.getElementById(id); if (!el) console.error('MISSING VIEW:', id); });
   document.getElementById('dashboard-view').style.display = view === 'dashboard' ? 'grid' : 'none';
   document.getElementById('heatmap-view').classList.toggle('visible', view === 'heatmap');
   document.getElementById('roster-view').classList.toggle('visible', view === 'roster');
   document.getElementById('consultant-view').classList.toggle('visible', view === 'consultant');
-  document.getElementById('programming-view').classList.toggle('visible', view === 'programming');
+  const pv = document.getElementById('programming-view'); if (pv) pv.classList.toggle('visible', view === 'programming');
   document.getElementById('coveragemap-view').style.display = view === 'coveragemap' ? 'flex' : 'none';
   document.getElementById('gearup-view').style.display = view === 'gearup' ? 'grid' : 'none';
   document.getElementById('tab-dashboard').classList.toggle('active', view === 'dashboard');
