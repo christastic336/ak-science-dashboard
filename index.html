@@ -2500,6 +2500,14 @@ function renderRosterTable() {
       </td>`;
     };
 
+    // Helper: inline text input cell
+    const textCell = (key) => {
+      const val = data.events[key + '_text'] || '';
+      return `<td onclick="event.stopPropagation()" style="min-width:110px">
+        <input type="text" value="${val.replace(/"/g,'&quot;')}" placeholder="—" style="width:100%;background:transparent;border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:0.72rem;padding:2px 5px;box-sizing:border-box" onchange="inlineTextSet('${t.id}','${key}',this.value)" onclick="event.stopPropagation()">
+      </td>`;
+    };
+
     // Helper: date cell with checkbox baked in
     const dateCb = (key) => {
       const done = !!data.events[key + '_done'];
@@ -2525,7 +2533,7 @@ function renderRosterTable() {
       ${dateCb('verticalTeam1')}
       ${dateCb('verticalTeam2')}
       ${dateCb('springSiteVisit')}
-      ${cb('summerTraining')}
+      ${textCell('summerTraining')}
       ${cb('launchDay')}
       ${cb('teacherInventory')}
       ${cb('fallForum')}
@@ -2627,6 +2635,14 @@ function inlineToggle(id, key, checked) {
 function inlineDateSet(id, key, val) {
   const data = getTeacherData(id);
   data.events[key + '_date'] = val;
+  saveTeacherData(id, data);
+  if (rosterState.selectedId === id) renderTeacherPanel(id);
+  flashSave(id);
+}
+
+function inlineTextSet(id, key, val) {
+  const data = getTeacherData(id);
+  data.events[key + '_text'] = val;
   saveTeacherData(id, data);
   if (rosterState.selectedId === id) renderTeacherPanel(id);
   flashSave(id);
