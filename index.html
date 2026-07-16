@@ -1383,13 +1383,11 @@ const COUNTY_DATA = {"Adair":{"ap":[[{"e":41,"co":41,"t":36,"q":21,"pr":51},{"e"
 // VIEW SWITCHER
 // ═══════════════════════════════════════════════════
 function switchView(view) {
-  const _views = ['dashboard-view','heatmap-view','roster-view','consultant-view','programming-view','coveragemap-view','gearup-view'];
-  _views.forEach(id => { const el = document.getElementById(id); if (!el) console.error('MISSING VIEW:', id); });
   document.getElementById('dashboard-view').style.display = view === 'dashboard' ? 'grid' : 'none';
   document.getElementById('heatmap-view').classList.toggle('visible', view === 'heatmap');
   document.getElementById('roster-view').classList.toggle('visible', view === 'roster');
   document.getElementById('consultant-view').classList.toggle('visible', view === 'consultant');
-  const pv = document.getElementById('programming-view'); if (pv) pv.classList.toggle('visible', view === 'programming');
+  document.getElementById('programming-view').classList.toggle('visible', view === 'programming');
   document.getElementById('coveragemap-view').style.display = view === 'coveragemap' ? 'flex' : 'none';
   document.getElementById('gearup-view').style.display = view === 'gearup' ? 'grid' : 'none';
   document.getElementById('tab-dashboard').classList.toggle('active', view === 'dashboard');
@@ -3675,11 +3673,20 @@ function getFilteredConsultants() {
     if (role === 'launchday' && !(c.launchDayBlocks > 0)) return false;
     return true;
   }).sort((a, b) => {
-    let av = a[consState.sortKey], bv = b[consState.sortKey];
-    if (av == null) av = '';
-    if (bv == null) bv = '';
-    if (typeof av === 'string') av = av.toLowerCase();
-    if (typeof bv === 'string') bv = bv.toLowerCase();
+    const key = consState.sortKey;
+    // Checkbox/boolean columns: compare as 1/0 truthiness so mixed stored types
+    // (boolean true vs the string "TRUE" returned by Sheets) can't break grouping.
+    const BOOL_COLS = { isMentor:1, fallForum:1, programming:1 };
+    const norm = (v) => {
+      if (BOOL_COLS[key]) {
+        const s = String(v == null ? '' : v).trim().toLowerCase();
+        return (v === true || s === 'true' || s === 'y' || s === 'yes' || s === '1' || s === 'checked') ? 1 : 0;
+      }
+      if (v == null) v = '';
+      if (typeof v === 'string') v = v.toLowerCase();
+      return v;
+    };
+    const av = norm(a[key]), bv = norm(b[key]);
     return av < bv ? -consState.sortDir : av > bv ? consState.sortDir : 0;
   });
 }
@@ -5076,13 +5083,14 @@ async function loadSheetsData() {
           if (r[k] !== '' && r[k] != null) r[k] = Number(r[k]);
           else r[k] = null;
         });
-        // Programming is a boolean flag stored as 'true'/'Y' string in the sheet
+        // Boolean checkbox flags are stored as 'true'/'Y' strings in the sheet.
         // Google Sheets coerces the string "true" into a boolean cell and returns
-        // it as "TRUE" on read — so match case-insensitively across variants.
-        {
-          const pv = String(r.programming == null ? '' : r.programming).trim().toLowerCase();
-          r.programming = (pv === 'true' || pv === 'y' || pv === 'yes' || pv === '1' || pv === 'checked') ? true : null;
-        }
+        // it as "TRUE" on read — so match case-insensitively across variants and
+        // normalize to a true boolean so sorting/filtering stay type-consistent.
+        ['programming','isMentor','fallForum'].forEach(k => {
+          const bv = String(r[k] == null ? '' : r[k]).trim().toLowerCase();
+          r[k] = (bv === 'true' || bv === 'y' || bv === 'yes' || bv === '1' || bv === 'checked') ? true : null;
+        });
         CONSULTANTS.unshift(r);
       });
       // The Sheet replaced the consultant objects. Re-apply local edits so
