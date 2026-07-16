@@ -3289,15 +3289,16 @@ function copySelectedTeacherEmails() {
           <div class="col-picker-item" onclick="consColToggle(8,this)"><input type="checkbox" checked> Master Series</div>
           <div class="col-picker-item" onclick="consColToggle(9,this)"><input type="checkbox" checked> MS Mod</div>
           <div class="col-picker-item" onclick="consColToggle(10,this)"><input type="checkbox" checked> Mentor Blocks</div>
-          <div class="col-picker-item" onclick="consColToggle(11,this)"><input type="checkbox" checked> Fall Forum</div>
-          <div class="col-picker-item" onclick="consColToggle(12,this)"><input type="checkbox" checked> Mentor</div>
-          <div class="col-picker-item" onclick="consColToggle(13,this)"><input type="checkbox" checked> Mock Leader</div>
-          <div class="col-picker-item" onclick="consColToggle(14,this)"><input type="checkbox" checked> Programming</div>
+          <div class="col-picker-item" onclick="consColToggle(11,this)"><input type="checkbox" checked> Exam Prep Blocks</div>
+          <div class="col-picker-item" onclick="consColToggle(12,this)"><input type="checkbox" checked> Fall Forum</div>
+          <div class="col-picker-item" onclick="consColToggle(13,this)"><input type="checkbox" checked> Mentor</div>
+          <div class="col-picker-item" onclick="consColToggle(14,this)"><input type="checkbox" checked> Mock Leader</div>
+          <div class="col-picker-item" onclick="consColToggle(15,this)"><input type="checkbox" checked> Programming</div>
           <div class="col-picker-divider"></div>
           <div class="col-picker-group">Contract Details</div>
-          <div class="col-picker-item" onclick="consColToggle(15,this)"><input type="checkbox" checked> Stipend</div>
-          <div class="col-picker-item" onclick="consColToggle(16,this)"><input type="checkbox" checked> Travel Allow.</div>
-          <div class="col-picker-item" onclick="consColToggle(17,this)"><input type="checkbox" checked> Notes</div>
+          <div class="col-picker-item" onclick="consColToggle(16,this)"><input type="checkbox" checked> Stipend</div>
+          <div class="col-picker-item" onclick="consColToggle(17,this)"><input type="checkbox" checked> Travel Allow.</div>
+          <div class="col-picker-item" onclick="consColToggle(18,this)"><input type="checkbox" checked> Notes</div>
           <div class="col-picker-divider"></div>
           <button class="col-picker-reset" onclick="consColPickerReset()">↺ Show all columns</button>
         </div>
@@ -3319,6 +3320,7 @@ function copySelectedTeacherEmails() {
             <col style="width:95px"><!-- Master Series -->
             <col style="width:82px"><!-- MS Mod -->
             <col style="width:82px"><!-- Mentor Blocks -->
+            <col style="width:92px"><!-- Exam Prep Blocks -->
             <col style="width:72px"><!-- Fall Forum -->
             <col style="width:65px"><!-- Mentor -->
             <col style="width:72px"><!-- Mock -->
@@ -3332,7 +3334,7 @@ function copySelectedTeacherEmails() {
               <th colspan="1" class="frozen col-group-identity">Identity</th>
               <th colspan="3" class="col-group-identity" style="color:var(--muted)!important">Info</th>
               <th colspan="2" class="col-group-events" style="background:rgba(167,139,250,0.1);color:#a78bfa">Subjects</th>
-              <th colspan="9" class="col-group-checkboxes" style="background:rgba(52,211,153,0.08);color:var(--green)">✓ Engagement</th>
+              <th colspan="10" class="col-group-checkboxes" style="background:rgba(52,211,153,0.08);color:var(--green)">✓ Engagement</th>
               <th colspan="3" class="col-group-meta">Contract Details</th>
             </tr>
             <tr>
@@ -3347,13 +3349,14 @@ function copySelectedTeacherEmails() {
               <th data-col="8" onclick="consSort('masterSeries')">Master Series</th>
               <th data-col="9" onclick="consSort('msMod')">MS Mod</th>
               <th data-col="10" onclick="consSort('mentorBlocks')">Mentor Blocks</th>
-              <th data-col="11" onclick="consSort('fallForum')" style="text-align:center">Fall Forum</th>
-              <th data-col="12" onclick="consSort('isMentor')" style="text-align:center">Mentor</th>
-              <th data-col="13" onclick="consSort('mockExamLeader')">Mock Leader</th>
-              <th data-col="14" onclick="consSort('programming')">Programming</th>
-              <th data-col="15" onclick="consSort('stipend')">Stipend</th>
-              <th data-col="16" onclick="consSort('travelAllowance')">Travel Allow.</th>
-              <th data-col="17">Notes</th>
+              <th data-col="11" onclick="consSort('examPrepBlocks')">Exam Prep Blocks</th>
+              <th data-col="12" onclick="consSort('fallForum')" style="text-align:center">Fall Forum</th>
+              <th data-col="13" onclick="consSort('isMentor')" style="text-align:center">Mentor</th>
+              <th data-col="14" onclick="consSort('mockExamLeader')">Mock Leader</th>
+              <th data-col="15" onclick="consSort('programming')">Programming</th>
+              <th data-col="16" onclick="consSort('stipend')">Stipend</th>
+              <th data-col="17" onclick="consSort('travelAllowance')">Travel Allow.</th>
+              <th data-col="18">Notes</th>
             </tr>
           </thead>
           <tbody id="cons-tbody"></tbody>
@@ -3407,6 +3410,7 @@ function copySelectedTeacherEmails() {
       <div class="cons-field"><label>Master Series Classes</label><input id="cm-masterSeries" type="number" min="0" placeholder="0"></div>
       <div class="cons-field"><label>MS Mod</label><input id="cm-msMod" type="number" min="0" placeholder="0"></div>
       <div class="cons-field"><label>Mentor Blocks</label><input id="cm-mentor" type="number" min="0" placeholder="0"></div>
+      <div class="cons-field"><label>Exam Prep Blocks</label><input id="cm-examPrep" type="number" min="0" placeholder="0"></div>
       <div class="cons-field full-width" style="display:flex;align-items:center;gap:8px;padding-top:4px">
         <input type="checkbox" id="cm-mockLeader" style="width:15px;height:15px;accent-color:var(--green);cursor:pointer;flex-shrink:0">
         <label for="cm-mockLeader" style="font-size:0.82rem;color:var(--text);text-transform:none;letter-spacing:0;cursor:pointer;margin:0">Mock Exam Leader</label>
@@ -3749,6 +3753,7 @@ function renderConsultantTable() {
       <td class="editable">${numInput(c.masterSeries,'masterSeries')}</td>
       <td class="editable">${numInput(c.msMod,'msMod')}</td>
       <td class="editable">${numInput(c.mentorBlocks,'mentorBlocks')}</td>
+      <td class="editable">${numInput(c.examPrepBlocks,'examPrepBlocks')}</td>
       <td style="text-align:center">
         <input type="checkbox" ${c.fallForum ? 'checked' : ''} onchange="consInlineEdit('${c.id}','fallForum',this.checked||null)" style="width:15px;height:15px;accent-color:var(--green);cursor:pointer" title="Fall Forum">
       </td>
@@ -4054,7 +4059,7 @@ function saveConsEdit(id, fields) {
   if (id.startsWith('ca')) return; // added consultants persist via persistAddedConsultants
   const c = CONSULTANTS.find(x => x.id === id);
   if (!c) return;
-  const keys = fields || ['programming','masterSeries','msMod','mentorBlocks','launchDayBlocks','ffssBlocks','stipend','travelAllowance','mockExamLeader','contract','subj1','subj2','email','address1','address2','firstName','lastName'];
+  const keys = fields || ['programming','masterSeries','msMod','mentorBlocks','examPrepBlocks','launchDayBlocks','ffssBlocks','stipend','travelAllowance','mockExamLeader','contract','subj1','subj2','email','address1','address2','firstName','lastName'];
   try {
     const edits = getConsEdits();
     if (!edits[id]) edits[id] = {};
@@ -4114,6 +4119,7 @@ function openConsModal(editId) {
   document.getElementById('cm-masterSeries').value = c?.masterSeries ?? '';
   document.getElementById('cm-msMod').value = c?.msMod ?? '';
   document.getElementById('cm-mentor').value = c?.mentorBlocks ?? '';
+  document.getElementById('cm-examPrep').value = c?.examPrepBlocks ?? '';
   document.getElementById('cm-mockLeader').checked = c?.mockExamLeader === 'Y' || c?.mockExamLeader === true;
   document.getElementById('cm-programming').checked = !!c?.programming;
   document.getElementById('cm-stipend').value = c?.stipend ?? '';
@@ -4160,6 +4166,7 @@ function saveConsModal() {
     masterSeries: numOrNull('cm-masterSeries'),
     msMod: numOrNull('cm-msMod'),
     mentorBlocks: numOrNull('cm-mentor'),
+    examPrepBlocks: numOrNull('cm-examPrep'),
     mockExamLeader: document.getElementById('cm-mockLeader').checked ? 'Y' : null,
     programming: document.getElementById('cm-programming').checked ? true : null,
     stipend: numOrNull('cm-stipend'),
@@ -5012,7 +5019,7 @@ function normalizeSheetHeader(h) {
 
 // ─── COLUMN MAPS ────────────────────────────────────────────────────
 const TEACHER_COLS = ['id','lastName','firstName','school','district','course','crpYear','program','confirmed','status','firstDayNotes','mentorRequested','teacherEmail','principalEmail'];
-const CONSULTANT_COLS = ['id','lastName','firstName','subj1','subj2','address1','address2','homePhone','cellPhone','email','contract','launchDayBlocks','ffssBlocks','masterSeries','msMod','stipend','travelAllowance','mentorBlocks','fallForum','isMentor','mockExamLeader','programming'];
+const CONSULTANT_COLS = ['id','lastName','firstName','subj1','subj2','address1','address2','homePhone','cellPhone','email','contract','launchDayBlocks','ffssBlocks','masterSeries','msMod','stipend','travelAllowance','mentorBlocks','fallForum','isMentor','mockExamLeader','programming','examPrepBlocks'];
 // Last Sheet column letter for the Consultants tab, derived from column count so
 // adding/removing fields never desyncs the A1 range (1->A, 18->R, 19->S, …).
 function colLetter(n) { let s = ''; while (n > 0) { const m = (n - 1) % 26; s = String.fromCharCode(65 + m) + s; n = Math.floor((n - 1) / 26); } return s; }
@@ -5079,7 +5086,7 @@ async function loadSheetsData() {
       }
       consRows.reverse().forEach(r => {
         // Coerce numeric fields
-        ['launchDayBlocks','ffssBlocks','masterSeries','msMod','stipend','travelAllowance','mentorBlocks'].forEach(k => {
+        ['launchDayBlocks','ffssBlocks','masterSeries','msMod','stipend','travelAllowance','mentorBlocks','examPrepBlocks'].forEach(k => {
           if (r[k] !== '' && r[k] != null) r[k] = Number(r[k]);
           else r[k] = null;
         });
