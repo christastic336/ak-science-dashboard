@@ -541,6 +541,7 @@ select:focus { outline: none; border-color: var(--accent); }
 .sync-indicator.synced { border-color: var(--green); color: var(--green); }
 .sync-indicator.syncing { border-color: var(--yellow); color: var(--yellow); }
 .sync-indicator.error { border-color: var(--red); color: var(--red); }
+.sync-indicator.error, .sync-indicator.offline { cursor: pointer; }
 .sync-indicator.hidden { display: none; }
 
 /* Setup banner */
@@ -653,7 +654,7 @@ select:focus { outline: none; border-color: var(--accent); }
     <span class="badge" id="year-badge">2024–25</span>
     <span class="badge">AP + Dual Credit</span>
     <span class="badge">Public Data</span>
-    <span class="sync-indicator hidden" id="sync-indicator">☁ Offline</span>
+    <span class="sync-indicator hidden" id="sync-indicator" onclick="showSyncStatusDetail()">☁ Offline</span>
     <button class="auth-btn" id="auth-btn" onclick="gsiSignIn()">
       <span>Sign in with Google</span>
     </button>
@@ -4755,7 +4756,7 @@ let _gsiUserPicture = null;
     document.getElementById('setup-banner').classList.remove('hidden');
     document.getElementById('auth-btn').style.display = 'none';
     document.getElementById('sync-indicator').classList.remove('hidden');
-    document.getElementById('sync-indicator').textContent = '⚠ Offline';
+    setSyncState('offline', 'Google Sheets sync is not configured for this dashboard, so it runs offline using local storage only. See SETUP.md in the project folder to enable cloud sync.');
   }
   // Auth gate is shown by default (not hidden). It stays up until a valid
   // @kstc.com or @advanceky.com sign-in succeeds — see authGateSignIn().
@@ -4926,7 +4927,8 @@ function updateAuthUI(signedIn) {
   }
 }
 
-function setSyncState(state) {
+let _lastSyncError = '';   // full reason for the most recent error/offline state
+function setSyncState(state, message) {
   // state: 'syncing' | 'synced' | 'error' | 'offline'
   const ind = document.getElementById('sync-indicator');
   ind.className = 'sync-indicator';
@@ -4937,7 +4939,23 @@ function setSyncState(state) {
     offline: '⚠ Offline',
   };
   ind.textContent = labels[state] || labels.offline;
-  if (state !== 'offline') ind.classList.add(state);
+  ind.classList.add(state === 'offline' ? 'offline' : state);
+  if (state === 'error' || state === 'offline') {
+    _lastSyncError = message || (state === 'offline'
+      ? "You're not signed in to Google, so changes stay on this device only. Click “Sign in with Google” to sync."
+      : 'A sync error occurred, but no details were captured.');
+    ind.title = 'Click to see why sync failed';
+  } else {
+    _lastSyncError = '';
+    ind.title = state === 'synced' ? 'Connected to Google Sheets' : '';
+  }
+}
+
+// Clicking the indicator while it's red/offline explains the reason
+function showSyncStatusDetail() {
+  const ind = document.getElementById('sync-indicator');
+  if (!ind.classList.contains('error') && !ind.classList.contains('offline')) return;
+  alert(_lastSyncError || 'Sync is not currently active.');
 }
 
 // ─── TOAST ──────────────────────────────────────────────────────────
@@ -5183,7 +5201,7 @@ async function loadSheetsData() {
 
   } catch(err) {
     console.error('loadSheetsData error:', err);
-    setSyncState('error');
+    setSyncState('error', 'Could not load from Google Sheets: ' + err.message);
     showSyncToast('Could not load from Google Sheets: ' + err.message);
   }
 }
@@ -5200,7 +5218,7 @@ function debouncedWrite(key, fn, delay) {
       setSyncState('synced');
     } catch(err) {
       console.error('Sheets write error:', err);
-      setSyncState('error');
+      setSyncState('error', 'Sync error: ' + err.message);
       showSyncToast('Sync error: ' + err.message);
     }
   }, delay || 1500);
