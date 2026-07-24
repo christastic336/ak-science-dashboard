@@ -4240,6 +4240,25 @@ function deleteConsultant(id) {
   }
 })();
 
+// ─── ONE-TIME SEED: Launch Day registration import ───
+// Marks Launch Day done for teachers with an "X" or "Dup" in the
+// spreadsheet's "Launch Day Reg" column. Runs once (guarded by a flag)
+// so manual changes afterward are never clobbered.
+(function seedLaunchDayReg() {
+  const FLAG = 'akLaunchDaySeed_v1';
+  if (localStorage.getItem(FLAG)) return;
+  const ids = ['t1','t2','t3','t4','t5','t7','t8','t10','t11','t14','t15','t16',
+    't17','t18','t19','t20','t21','t22','t23','t24','t25','t26','t27','t28','t29',
+    't30','t32','t34','t35'];
+  ids.forEach(id => {
+    const data = getTeacherData(id);
+    if (!data.events) data.events = {};
+    data.events.launchDay_done = true;
+    saveTeacherData(id, data);
+  });
+  localStorage.setItem(FLAG, '1');
+})();
+
 // ─── CONSULTANT COLUMN PICKER ───
 const CONS_COL_STORAGE = 'akConsHiddenCols_v4'; // v4: added Fall Forum col (index 11), shifted Mentor+ up by 1
 
@@ -4308,6 +4327,18 @@ function toggleContract(id, el) {
   document.querySelectorAll(`[onclick*="toggleContract('${id}'"]`).forEach(cb => {
     if (cb !== el) cb.checked = el.checked;
   });
+  // Persist locally so the change survives refresh even when offline.
+  // Runtime-added consultants ('ca…') persist their whole record separately;
+  // seed consultants use the changed-field overlay.
+  if (id.startsWith('ca')) {
+    persistAddedConsultants();
+  } else {
+    saveConsEdit(id, ['contract']);
+  }
+  // Sync to the Google Sheet when signed in
+  if (typeof debouncedWrite === 'function' && typeof _gsiAccessToken !== 'undefined' && _gsiAccessToken) {
+    debouncedWrite('consRow_' + id, () => syncConsultantRow(id), 800);
+  }
 }
 
 function closeConsPanel() {
