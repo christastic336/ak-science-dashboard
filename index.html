@@ -3277,29 +3277,33 @@ function copySelectedTeacherEmails() {
           <div class="col-picker-group">Identity (always visible)</div>
           <div class="col-picker-item frozen-col"><input type="checkbox" checked disabled> Name</div>
           <div class="col-picker-divider"></div>
+          <div class="col-picker-group">Registration</div>
+          <div class="col-picker-item" onclick="consColToggle(1,this)"><input type="checkbox" checked> Launch Day Reg</div>
+          <div class="col-picker-item" onclick="consColToggle(2,this)"><input type="checkbox" checked> FF Reg</div>
+          <div class="col-picker-divider"></div>
           <div class="col-picker-group">Info</div>
-          <div class="col-picker-item" onclick="consColToggle(1,this)"><input type="checkbox" checked> Address</div>
-          <div class="col-picker-item" onclick="consColToggle(2,this)"><input type="checkbox" checked> Email</div>
-          <div class="col-picker-item" onclick="consColToggle(3,this)"><input type="checkbox" checked> Contract</div>
-          <div class="col-picker-item" onclick="consColToggle(4,this)"><input type="checkbox" checked> Subj 1</div>
-          <div class="col-picker-item" onclick="consColToggle(5,this)"><input type="checkbox" checked> Subj 2</div>
+          <div class="col-picker-item" onclick="consColToggle(3,this)"><input type="checkbox" checked> Address</div>
+          <div class="col-picker-item" onclick="consColToggle(4,this)"><input type="checkbox" checked> Email</div>
+          <div class="col-picker-item" onclick="consColToggle(5,this)"><input type="checkbox" checked> Contract</div>
+          <div class="col-picker-item" onclick="consColToggle(6,this)"><input type="checkbox" checked> Subj 1</div>
+          <div class="col-picker-item" onclick="consColToggle(7,this)"><input type="checkbox" checked> Subj 2</div>
           <div class="col-picker-divider"></div>
           <div class="col-picker-group">Engagement</div>
-          <div class="col-picker-item" onclick="consColToggle(6,this)"><input type="checkbox" checked> Launch Day</div>
-          <div class="col-picker-item" onclick="consColToggle(7,this)"><input type="checkbox" checked> FF/SS Blocks</div>
-          <div class="col-picker-item" onclick="consColToggle(8,this)"><input type="checkbox" checked> Master Series</div>
-          <div class="col-picker-item" onclick="consColToggle(9,this)"><input type="checkbox" checked> MS Mod</div>
-          <div class="col-picker-item" onclick="consColToggle(10,this)"><input type="checkbox" checked> Mentor Blocks</div>
-          <div class="col-picker-item" onclick="consColToggle(11,this)"><input type="checkbox" checked> Exam Prep Blocks</div>
-          <div class="col-picker-item" onclick="consColToggle(12,this)"><input type="checkbox" checked> Fall Forum</div>
-          <div class="col-picker-item" onclick="consColToggle(13,this)"><input type="checkbox" checked> Mentor</div>
-          <div class="col-picker-item" onclick="consColToggle(14,this)"><input type="checkbox" checked> Mock Leader</div>
-          <div class="col-picker-item" onclick="consColToggle(15,this)"><input type="checkbox" checked> Programming</div>
+          <div class="col-picker-item" onclick="consColToggle(8,this)"><input type="checkbox" checked> Launch Day</div>
+          <div class="col-picker-item" onclick="consColToggle(9,this)"><input type="checkbox" checked> FF/SS Blocks</div>
+          <div class="col-picker-item" onclick="consColToggle(10,this)"><input type="checkbox" checked> Master Series</div>
+          <div class="col-picker-item" onclick="consColToggle(11,this)"><input type="checkbox" checked> MS Mod</div>
+          <div class="col-picker-item" onclick="consColToggle(12,this)"><input type="checkbox" checked> Mentor Blocks</div>
+          <div class="col-picker-item" onclick="consColToggle(13,this)"><input type="checkbox" checked> Exam Prep Blocks</div>
+          <div class="col-picker-item" onclick="consColToggle(14,this)"><input type="checkbox" checked> Fall Forum</div>
+          <div class="col-picker-item" onclick="consColToggle(15,this)"><input type="checkbox" checked> Mentor</div>
+          <div class="col-picker-item" onclick="consColToggle(16,this)"><input type="checkbox" checked> Mock Leader</div>
+          <div class="col-picker-item" onclick="consColToggle(17,this)"><input type="checkbox" checked> Programming</div>
           <div class="col-picker-divider"></div>
           <div class="col-picker-group">Contract Details</div>
-          <div class="col-picker-item" onclick="consColToggle(16,this)"><input type="checkbox" checked> Stipend</div>
-          <div class="col-picker-item" onclick="consColToggle(17,this)"><input type="checkbox" checked> Travel Allow.</div>
-          <div class="col-picker-item" onclick="consColToggle(18,this)"><input type="checkbox" checked> Notes</div>
+          <div class="col-picker-item" onclick="consColToggle(18,this)"><input type="checkbox" checked> Stipend</div>
+          <div class="col-picker-item" onclick="consColToggle(19,this)"><input type="checkbox" checked> Travel Allow.</div>
+          <div class="col-picker-item" onclick="consColToggle(20,this)"><input type="checkbox" checked> Notes</div>
           <div class="col-picker-divider"></div>
           <button class="col-picker-reset" onclick="consColPickerReset()">↺ Show all columns</button>
         </div>
@@ -3311,6 +3315,8 @@ function copySelectedTeacherEmails() {
         <table class="cons-table" id="cons-table">
           <colgroup>
             <col style="width:210px"><!-- Name -->
+            <col style="width:92px"><!-- Launch Day Reg -->
+            <col style="width:72px"><!-- FF Reg -->
             <col style="width:280px"><!-- Address -->
             <col style="width:260px"><!-- Email -->
             <col style="width:72px"><!-- Contract -->
@@ -3333,6 +3339,7 @@ function copySelectedTeacherEmails() {
           <thead>
             <tr class="group-row">
               <th colspan="1" class="frozen col-group-identity">Identity</th>
+              <th colspan="2" class="col-group-checkboxes" style="background:rgba(251,191,36,0.12);color:var(--yellow)">✓ Registration</th>
               <th colspan="3" class="col-group-identity" style="color:var(--muted)!important">Info</th>
               <th colspan="2" class="col-group-events" style="background:rgba(167,139,250,0.1);color:#a78bfa">Subjects</th>
               <th colspan="10" class="col-group-checkboxes" style="background:rgba(52,211,153,0.08);color:var(--green)">✓ Engagement</th>
@@ -3340,24 +3347,26 @@ function copySelectedTeacherEmails() {
             </tr>
             <tr>
               <th data-col="0" class="frozen frozen-last" onclick="consSort('lastName')" id="cons-sort-lastName">Name <span class="sort-arrow">↕</span></th>
-              <th data-col="1" onclick="consSort('address2')">Address</th>
-              <th data-col="2" onclick="consSort('email')">Email</th>
-              <th data-col="3" onclick="consSort('contract')" style="text-align:center">Contract</th>
-              <th data-col="4" onclick="consSort('subj1')">Subj 1</th>
-              <th data-col="5" onclick="consSort('subj2')">Subj 2</th>
-              <th data-col="6" onclick="consSort('launchDayBlocks')">Launch Day</th>
-              <th data-col="7" onclick="consSort('ffssBlocks')">FF/SS Blocks</th>
-              <th data-col="8" onclick="consSort('masterSeries')">Master Series</th>
-              <th data-col="9" onclick="consSort('msMod')">MS Mod</th>
-              <th data-col="10" onclick="consSort('mentorBlocks')">Mentor Blocks</th>
-              <th data-col="11" onclick="consSort('examPrepBlocks')">Exam Prep Blocks</th>
-              <th data-col="12" onclick="consSort('fallForum')" style="text-align:center">Fall Forum</th>
-              <th data-col="13" onclick="consSort('isMentor')" style="text-align:center">Mentor</th>
-              <th data-col="14" onclick="consSort('mockExamLeader')">Mock Leader</th>
-              <th data-col="15" onclick="consSort('programming')">Programming</th>
-              <th data-col="16" onclick="consSort('stipend')">Stipend</th>
-              <th data-col="17" onclick="consSort('travelAllowance')">Travel Allow.</th>
-              <th data-col="18">Notes</th>
+              <th data-col="1" onclick="consSort('launchDayReg')" style="text-align:center">Launch Day Reg</th>
+              <th data-col="2" onclick="consSort('ffReg')" style="text-align:center">FF Reg</th>
+              <th data-col="3" onclick="consSort('address2')">Address</th>
+              <th data-col="4" onclick="consSort('email')">Email</th>
+              <th data-col="5" onclick="consSort('contract')" style="text-align:center">Contract</th>
+              <th data-col="6" onclick="consSort('subj1')">Subj 1</th>
+              <th data-col="7" onclick="consSort('subj2')">Subj 2</th>
+              <th data-col="8" onclick="consSort('launchDayBlocks')">Launch Day</th>
+              <th data-col="9" onclick="consSort('ffssBlocks')">FF/SS Blocks</th>
+              <th data-col="10" onclick="consSort('masterSeries')">Master Series</th>
+              <th data-col="11" onclick="consSort('msMod')">MS Mod</th>
+              <th data-col="12" onclick="consSort('mentorBlocks')">Mentor Blocks</th>
+              <th data-col="13" onclick="consSort('examPrepBlocks')">Exam Prep Blocks</th>
+              <th data-col="14" onclick="consSort('fallForum')" style="text-align:center">Fall Forum</th>
+              <th data-col="15" onclick="consSort('isMentor')" style="text-align:center">Mentor</th>
+              <th data-col="16" onclick="consSort('mockExamLeader')">Mock Leader</th>
+              <th data-col="17" onclick="consSort('programming')">Programming</th>
+              <th data-col="18" onclick="consSort('stipend')">Stipend</th>
+              <th data-col="19" onclick="consSort('travelAllowance')">Travel Allow.</th>
+              <th data-col="20">Notes</th>
             </tr>
           </thead>
           <tbody id="cons-tbody"></tbody>
@@ -3681,7 +3690,7 @@ function getFilteredConsultants() {
     const key = consState.sortKey;
     // Checkbox/boolean columns: compare as 1/0 truthiness so mixed stored types
     // (boolean true vs the string "TRUE" returned by Sheets) can't break grouping.
-    const BOOL_COLS = { isMentor:1, fallForum:1, programming:1 };
+    const BOOL_COLS = { isMentor:1, fallForum:1, programming:1, launchDayReg:1, ffReg:1 };
     const norm = (v) => {
       if (BOOL_COLS[key]) {
         const s = String(v == null ? '' : v).trim().toLowerCase();
@@ -3736,6 +3745,12 @@ function renderConsultantTable() {
           <input style="flex:1;min-width:0" value="${(c.firstName||'').replace(/"/g,'&quot;')}" placeholder="First" onchange="consInlineEdit('${c.id}','firstName',this.value)" onclick="event.stopPropagation()" title="First name">
           <button class="cons-info-btn" onclick="event.stopPropagation();selectConsultant('${c.id}')" title="View full details">ℹ</button>
         </div>
+      </td>
+      <td style="text-align:center">
+        <input type="checkbox" ${c.launchDayReg ? 'checked' : ''} onchange="consInlineEdit('${c.id}','launchDayReg',this.checked||null)" style="width:15px;height:15px;accent-color:var(--yellow);cursor:pointer" title="Launch Day Registration">
+      </td>
+      <td style="text-align:center">
+        <input type="checkbox" ${c.ffReg ? 'checked' : ''} onchange="consInlineEdit('${c.id}','ffReg',this.checked||null)" style="width:15px;height:15px;accent-color:var(--yellow);cursor:pointer" title="Fall Forum Registration">
       </td>
       <td class="editable">
         <input class="cons-cell-input" value="${(c.address1||'').replace(/"/g,'&quot;')}" placeholder="Street…" onchange="consInlineEdit('${c.id}','address1',this.value)" style="border-bottom:1px solid var(--border)">
@@ -4275,7 +4290,7 @@ function deleteConsultant(id) {
 })();
 
 // ─── CONSULTANT COLUMN PICKER ───
-const CONS_COL_STORAGE = 'akConsHiddenCols_v4'; // v4: added Fall Forum col (index 11), shifted Mentor+ up by 1
+const CONS_COL_STORAGE = 'akConsHiddenCols_v5'; // v5: added Registration group (Launch Day Reg, FF Reg) at index 1-2, shifted all others +2
 
 function getConsHiddenCols() {
   try { return new Set(JSON.parse(localStorage.getItem(CONS_COL_STORAGE)) || []); }
@@ -5083,7 +5098,10 @@ function normalizeSheetHeader(h) {
 
 // ─── COLUMN MAPS ────────────────────────────────────────────────────
 const TEACHER_COLS = ['id','lastName','firstName','school','district','course','crpYear','program','confirmed','status','firstDayNotes','mentorRequested','teacherEmail','principalEmail'];
-const CONSULTANT_COLS = ['id','lastName','firstName','subj1','subj2','address1','address2','homePhone','cellPhone','email','contract','launchDayBlocks','ffssBlocks','masterSeries','msMod','stipend','travelAllowance','mentorBlocks','fallForum','isMentor','mockExamLeader','programming','examPrepBlocks'];
+// launchDayReg / ffReg are appended at the END so existing columns keep their
+// sheet positions (positional writes stay aligned). Header cells "Launch Day
+// Reg" / "FF Reg" in the sheet enable cross-device read-back.
+const CONSULTANT_COLS = ['id','lastName','firstName','subj1','subj2','address1','address2','homePhone','cellPhone','email','contract','launchDayBlocks','ffssBlocks','masterSeries','msMod','stipend','travelAllowance','mentorBlocks','fallForum','isMentor','mockExamLeader','programming','examPrepBlocks','launchDayReg','ffReg'];
 // Last Sheet column letter for the Consultants tab, derived from column count so
 // adding/removing fields never desyncs the A1 range (1->A, 18->R, 19->S, …).
 function colLetter(n) { let s = ''; while (n > 0) { const m = (n - 1) % 26; s = String.fromCharCode(65 + m) + s; n = Math.floor((n - 1) / 26); } return s; }
@@ -5158,7 +5176,7 @@ async function loadSheetsData() {
         // Google Sheets coerces the string "true" into a boolean cell and returns
         // it as "TRUE" on read — so match case-insensitively across variants and
         // normalize to a true boolean so sorting/filtering stay type-consistent.
-        ['programming','isMentor','fallForum'].forEach(k => {
+        ['programming','isMentor','fallForum','launchDayReg','ffReg'].forEach(k => {
           const bv = String(r[k] == null ? '' : r[k]).trim().toLowerCase();
           r[k] = (bv === 'true' || bv === 'y' || bv === 'yes' || bv === '1' || bv === 'checked') ? true : null;
         });
