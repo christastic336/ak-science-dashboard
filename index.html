@@ -4247,7 +4247,7 @@ function deleteConsultant(id) {
 (function seedLaunchDayReg() {
   const FLAG = 'akLaunchDaySeed_v1';
   if (localStorage.getItem(FLAG)) return;
-  const ids = ['t1','t2','t3','t4','t5','t7','t8','t10','t11','t14','t15','t16',
+  const ids = ['t1','t2','t3','t4','t5','t7','t8','t10','t11','t15','t16',
     't17','t18','t19','t20','t21','t22','t23','t24','t25','t26','t27','t28','t29',
     't30','t32','t34','t35'];
   ids.forEach(id => {
@@ -4255,6 +4255,21 @@ function deleteConsultant(id) {
     if (!data.events) data.events = {};
     data.events.launchDay_done = true;
     saveTeacherData(id, data);
+  });
+  localStorage.setItem(FLAG, '1');
+})();
+
+// ─── ONE-TIME CORRECTION: uncheck teachers seeded in error ───
+// Koetting was seeded by mistake (misread reg cell) — actively clear him.
+(function correctLaunchDayReg() {
+  const FLAG = 'akLaunchDayCorrect_v1';
+  if (localStorage.getItem(FLAG)) return;
+  ['t14'].forEach(id => {
+    const data = getTeacherData(id);
+    if (data.events && data.events.launchDay_done) {
+      data.events.launchDay_done = false;
+      saveTeacherData(id, data);
+    }
   });
   localStorage.setItem(FLAG, '1');
 })();
@@ -5226,6 +5241,7 @@ async function loadSheetsData() {
     // One-time push of the imported Launch Day registrations up to the Sheet.
     // Runs after teachers+events are loaded so it uses the Sheet's real IDs.
     await pushLaunchDaySeedToSheet();
+    await correctLaunchDaySheet();
 
     setSyncState('synced');
     // Re-render active views to show fresh data
@@ -5251,7 +5267,7 @@ function _launchDayShouldCheck(t) {
   const fn = (t.firstName || '').trim();
   if (ln === 'Cooper') return /brandi/i.test(fn); // Brandi = X, Clark = blank
   const INC = new Set(['Ryan','Deep','Horn','Farmer','Punjack','Jenkins',
-    'Robertson','Littrell','Lafferty','Koetting','Clemons','Smith','Lewis',
+    'Robertson','Littrell','Lafferty','Clemons','Smith','Lewis',
     'Murphy','Milliner','Burgan','Vanderpool','Burkhead','Meade','Combs',
     'Vaske','Baber','Gazave','Bradley','Putnam','Elumalai','Gibala']);
   return INC.has(ln);
@@ -5270,6 +5286,27 @@ async function pushLaunchDaySeedToSheet() {
     } catch(err) {
       console.error('Launch Day push failed for ' + t.id + ':', err);
       return; // leave flag unset so it retries next sign-in
+    }
+  }
+  localStorage.setItem(FLAG, '1');
+}
+
+// One-time correction: clear teachers checked in error (Koetting) from the
+// Sheet too. Matches by name; only writes false, guarded, retries on failure.
+async function correctLaunchDaySheet() {
+  const FLAG = 'akLaunchDayCorrectSheet_v1';
+  if (!_gsiAccessToken || localStorage.getItem(FLAG)) return;
+  const targets = TEACHERS.filter(t => (t.lastName || '').trim() === 'Koetting');
+  for (const t of targets) {
+    const data = getTeacherData(t.id);
+    if (!data.events) data.events = {};
+    data.events.launchDay_done = false;
+    saveTeacherData(t.id, data);
+    try {
+      await syncTeacherEvent(t.id, 'launchDay_done', false);
+    } catch(err) {
+      console.error('Launch Day correction failed for ' + t.id + ':', err);
+      return;
     }
   }
   localStorage.setItem(FLAG, '1');
