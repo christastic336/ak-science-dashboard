@@ -5223,6 +5223,10 @@ async function loadSheetsData() {
       saveProgManualLocal();
     }
 
+    // One-time push of the imported Launch Day registrations up to the Sheet.
+    // Runs after teachers+events are loaded so it uses the Sheet's real IDs.
+    await pushLaunchDaySeedToSheet();
+
     setSyncState('synced');
     // Re-render active views to show fresh data
     const activeView = document.querySelector('.top-tab.active')?.id;
@@ -5235,6 +5239,40 @@ async function loadSheetsData() {
     setSyncState('error', 'Could not load from Google Sheets: ' + err.message);
     showSyncToast('Could not load from Google Sheets: ' + err.message);
   }
+}
+
+// ─── ONE-TIME LAUNCH DAY REG PUSH TO SHEET ───────────────────────────
+// Matches teachers by name (Sheet IDs differ from the offline seed for a
+// few teachers, so name-matching is the reliable key). Only writes
+// launchDay_done = true — never deletes. Guarded so it runs once; if a
+// write fails the flag isn't set, so it retries on the next sign-in.
+function _launchDayShouldCheck(t) {
+  const ln = (t.lastName || '').trim();
+  const fn = (t.firstName || '').trim();
+  if (ln === 'Cooper') return /brandi/i.test(fn); // Brandi = X, Clark = blank
+  const INC = new Set(['Ryan','Deep','Horn','Farmer','Punjack','Jenkins',
+    'Robertson','Littrell','Lafferty','Koetting','Clemons','Smith','Lewis',
+    'Murphy','Milliner','Burgan','Vanderpool','Burkhead','Meade','Combs',
+    'Vaske','Baber','Gazave','Bradley','Putnam','Elumalai','Gibala']);
+  return INC.has(ln);
+}
+async function pushLaunchDaySeedToSheet() {
+  const FLAG = 'akLaunchDaySheetPush_v1';
+  if (!_gsiAccessToken || localStorage.getItem(FLAG)) return;
+  const targets = TEACHERS.filter(_launchDayShouldCheck);
+  for (const t of targets) {
+    const data = getTeacherData(t.id);
+    if (!data.events) data.events = {};
+    data.events.launchDay_done = true;
+    saveTeacherData(t.id, data);
+    try {
+      await syncTeacherEvent(t.id, 'launchDay_done', true);
+    } catch(err) {
+      console.error('Launch Day push failed for ' + t.id + ':', err);
+      return; // leave flag unset so it retries next sign-in
+    }
+  }
+  localStorage.setItem(FLAG, '1');
 }
 
 // ─── DEBOUNCED WRITE HELPERS ─────────────────────────────────────────
