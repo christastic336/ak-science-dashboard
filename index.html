@@ -5224,6 +5224,14 @@ async function loadSheetsData() {
       const data = getTeacherData(id);
       // Only overwrite keys that came from sheets (don't clobber local-only keys)
       Object.assign(data.events, events);
+      // Reconcile teacher-level fields that we persist THROUGH the events tab
+      // (key/value store) back onto the top-level data object the UI reads from.
+      // assignedMentor is stored under its own key; the panel text fields under
+      // meta_* keys. Empty string means "explicitly cleared", so honor it.
+      if ('assignedMentor' in data.events) data.assignedMentor = data.events.assignedMentor || null;
+      ['notes','schoolAddress','firstDayOfSchool','projectedEnrollments','confirmed'].forEach(f => {
+        if (('meta_' + f) in data.events) data[f] = data.events['meta_' + f] || '';
+      });
       saveTeacherData(id, data);
     });
 
@@ -5595,12 +5603,37 @@ setEventDate = function(id, key, val) {
   }
 };
 
-// Patch saveField (teacher notes)
+// Patch saveField (teacher panel fields). These live in the per-teacher DATA
+// object, NOT the flat teacher row — so syncTeacherRow alone never carried them.
+// 'confirmed' belongs in the Teachers tab, so mirror it onto the teacher object
+// and sync the row. The rest ride the TeacherEvents key/value tab under meta_*.
 const _origSaveField = saveField;
+const _META_FIELDS = ['notes','schoolAddress','firstDayOfSchool','projectedEnrollments','confirmed'];
 saveField = function(id, field, val) {
   _origSaveField(id, field, val);
+  if (!_gsiAccessToken) return;
+  if (_META_FIELDS.includes(field)) {
+    debouncedWrite('tmeta_' + id + '_' + field, () => syncTeacherEvent(id, 'meta_' + field, val), 1500);
+  }
+};
+
+// Patch inlineTextSet (teacher event text fields, e.g. Summer Training note) —
+// these already live in data.events, just were never pushed to the sheet.
+const _origInlineTextSet = inlineTextSet;
+inlineTextSet = function(id, key, val) {
+  _origInlineTextSet(id, key, val);
   if (_gsiAccessToken) {
-    debouncedWrite('tfield_' + id + '_' + field, () => syncTeacherRow(id), 1500);
+    debouncedWrite('ttext_' + id + '_' + key, () => syncTeacherEvent(id, key + '_text', val), 1500);
+  }
+};
+
+// Patch inlineMentorAssign (assigned mentor dropdown) — stored per-teacher, was
+// browser-only. Persist through the events tab under the 'assignedMentor' key.
+const _origInlineMentorAssign = inlineMentorAssign;
+inlineMentorAssign = function(id, consultantId) {
+  _origInlineMentorAssign(id, consultantId);
+  if (_gsiAccessToken) {
+    debouncedWrite('tmentor_' + id, () => syncTeacherEvent(id, 'assignedMentor', consultantId || ''), 1500);
   }
 };
 
